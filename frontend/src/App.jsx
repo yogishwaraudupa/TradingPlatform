@@ -3,6 +3,7 @@ import { io } from 'socket.io-client'
 import axios from 'axios'
 import { ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
 import Portfolio from './Portfolio.jsx'
+import TradingViewChart from './TradingViewChart.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const CLASSES = [
@@ -278,22 +279,27 @@ export default function App(){
             ))}
           </div>
 
-          {/* Main Chart */}
-          <div style={{height:340, padding:8, background:'#0b0e11'}}>
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={enriched} margin={{top:10, right:10, left:0, bottom:0}}>
-                <CartesianGrid stroke="rgba(43,49,57,0.5)" strokeDasharray="3 3" />
-                <XAxis dataKey="time" hide /><YAxis domain={['dataMin-2','dataMax+2']} tick={{fontSize:10, fill:'#848e9c'}} width={50} />
-                <Tooltip contentStyle={{background:'#181a20', border:'1px solid #2b3139', borderRadius:12, fontSize:12}} formatter={(v,n)=>[v,n]} labelFormatter={()=>selected} />
-                {chartType==='candle' && <Bar dataKey="close" barSize={6} shape={<CandleBar />} />}
-                {chartType==='line' && <Line type="monotone" dataKey="close" stroke="#f0b90b" dot={false} strokeWidth={2} />}
-                {chartType==='area' && <Area type="monotone" dataKey="close" stroke="#f0b90b" fill="rgba(240,185,11,0.18)" strokeWidth={2} />}
-                {ind.sma20 && <Line type="monotone" dataKey="sma20" stroke="#00bfff" dot={false} strokeWidth={1.5} />}
-                {ind.sma50 && <Line type="monotone" dataKey="sma50" stroke="#ff8c00" dot={false} strokeWidth={1.5} />}
-                {ind.ema20 && <Line type="monotone" dataKey="ema20" stroke="#a78bfa" dot={false} strokeWidth={1.5} strokeDasharray="4 2" />}
-                {ind.bb && <><Line type="monotone" dataKey="bbUpper" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbLower" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbMid" stroke="rgba(132,142,156,0.5)" dot={false} strokeWidth={1} /></>}
-              </ComposedChart>
-            </ResponsiveContainer>
+          {/* Main Chart - TradingView style */}
+          <div style={{height:360, background:'#0b0e11', borderBottom:'1px solid #2b3139'}}>
+            {chartType==='candle' ? (
+              <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} />
+            ) : (
+              <div style={{height:360, padding:8}}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={enriched} margin={{top:10, right:10, left:0, bottom:0}}>
+                    <CartesianGrid stroke="rgba(43,49,57,0.5)" strokeDasharray="3 3" />
+                    <XAxis dataKey="time" hide /><YAxis domain={['dataMin-2','dataMax+2']} tick={{fontSize:10, fill:'#848e9c'}} width={50} />
+                    <Tooltip contentStyle={{background:'#181a20', border:'1px solid #2b3139', borderRadius:12, fontSize:12}} formatter={(v,n)=>[v,n]} labelFormatter={()=>selected} />
+                    {chartType==='line' && <Line type="monotone" dataKey="close" stroke="#f0b90b" dot={false} strokeWidth={2} />}
+                    {chartType==='area' && <Area type="monotone" dataKey="close" stroke="#f0b90b" fill="rgba(240,185,11,0.18)" strokeWidth={2} />}
+                    {ind.sma20 && <Line type="monotone" dataKey="sma20" stroke="#00bfff" dot={false} strokeWidth={1.5} />}
+                    {ind.sma50 && <Line type="monotone" dataKey="sma50" stroke="#ff8c00" dot={false} strokeWidth={1.5} />}
+                    {ind.ema20 && <Line type="monotone" dataKey="ema20" stroke="#a78bfa" dot={false} strokeWidth={1.5} strokeDasharray="4 2" />}
+                    {ind.bb && <><Line type="monotone" dataKey="bbUpper" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbLower" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbMid" stroke="rgba(132,142,156,0.5)" dot={false} strokeWidth={1} /></>}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           {/* Volume */}
