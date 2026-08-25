@@ -4,6 +4,7 @@ import axios from 'axios'
 import { ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
 import Portfolio from './Portfolio.jsx'
 import TradingViewChart from './TradingViewChart.jsx'
+import LiveData from './LiveData.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const CLASSES = [
@@ -120,6 +121,7 @@ export default function App(){
   const [chartType, setChartType] = useState('candle') // candle | line | area
   const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false })
   const [showPortfolio, setShowPortfolio] = useState(false)
+  const [showLiveData, setShowLiveData] = useState(false)
   const [searchQ, setSearchQ] = useState('')
   const [searchRes, setSearchRes] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
@@ -245,6 +247,7 @@ export default function App(){
         </div>
         <div style={{marginLeft:'auto', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
           <div className="badge">Hi, {user.name||user.email}</div>
+          <button className="btn" style={{background:'#0ecb81', color:'#111', padding:'6px 12px', fontSize:12, display:'flex', alignItems:'center', gap:6}} onClick={()=>setShowLiveData(true)}><span style={{width:8,height:8,background:'#111',borderRadius:'50%', display:'inline-block', animation:'pulse 1s infinite'}}></span> LIVE DATA</button>
           <button className="btn" style={{background:'#f0b90b', color:'#111', padding:'6px 12px', fontSize:12}} onClick={()=>setShowPortfolio(true)}>📁 Portfolio</button>
           <div className="badge">Cash ${portfolio?.cash?.toLocaleString() ?? '—'}</div>
           <div className="badge" style={{background:(portfolio?.totalPnl??0)>=0?'rgba(14,203,129,0.15)':'rgba(246,70,93,0.15)'}}>P&L <span className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnl??0}</span></div>
@@ -417,6 +420,7 @@ export default function App(){
         </div>
       </div>
       {showPortfolio && <Portfolio onClose={()=>setShowPortfolio(false)} />}
+      {showLiveData && <LiveData onClose={()=>setShowLiveData(false)} onSelect={(sym, assetClass)=>{ setSelected(sym); if(assetClass) setCls(assetClass); }} />}
     </div>
   )
 }
