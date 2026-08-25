@@ -1,7 +1,44 @@
-body{margin:0;font-family:Inter,system-ui;background:#0b0e11;color:#eaecef}
-a{color:#f0b90b}
-.card{background:#1e2329;border-radius:12px;padding:16px;margin:8px}
-.btn{background:#f0b90b;color:#000;border:none;padding:8px 16px;border-radius:6px;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.nav{display:flex;gap:16px;padding:12px;background:#181a20}
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui;background:#0b0e11;color:#eaecef;overflow-x:hidden}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#2b3139;border-radius:6px}
+.header{position:sticky;top:0;z-index:20;background:rgba(24,26,32,0.85);backdrop-filter:blur(12px);border-bottom:1px solid #2b3139;display:flex;align-items:center;gap:16px;padding:10px 16px}
+.logo{font-weight:700;letter-spacing:0.5px;display:flex;gap:8px;align-items:center}
+.logo span{color:#f0b90b}
+.ticker{display:flex;gap:24px;overflow:hidden;white-space:nowrap;background:#181a20;border-bottom:1px solid #2b3139;padding:6px 12px;font-family:JetBrains Mono,monospace;font-size:12px}
+.ticker span{opacity:0.9}
+.badge{font-size:11px;padding:2px 6px;border-radius:999px;background:#2b3139;border:1px solid #3a404a}
+.tabs{display:flex;gap:8px}
+.tab{padding:8px 14px;border-radius:999px;border:1px solid #2b3139;background:#1e2329;color:#eaecef;cursor:pointer;font-weight:600;font-size:12px;letter-spacing:0.4px}
+.tab.active{background:#f0b90b;color:#111;border-color:#f0b90b;box-shadow:0 4px 16px rgba(240,185,11,0.3)}
+.layout{display:grid;grid-template-columns:320px 1fr 340px;gap:12px;padding:12px;min-height:calc(100vh - 90px)}
+@media(max-width:1200px){.layout{grid-template-columns:1fr}}
+.panel{background:#1e2329;border:1px solid #2b3139;border-radius:16px;overflow:hidden}
+.panel-h{padding:12px 14px;border-bottom:1px solid #2b3139;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.watch-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(43,49,57,0.6);cursor:pointer;transition:0.15s}
+.watch-item:hover{background:#252a32}
+.watch-item.active{border-left:3px solid #f0b90b;background:rgba(240,185,11,0.08)}
+.sym{font-weight:700;font-family:JetBrains Mono,monospace}
+.price{font-family:JetBrains Mono,monospace;font-weight:600}
 .price-up{color:#0ecb81}.price-down{color:#f6465d}
+.btn{border:none;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;transition:0.15s}
+.btn-buy{background:#0ecb81;color:#0b0e11;width:100%}
+.btn-buy:hover{filter:brightness(1.1)}
+.btn-sell{background:#f6465d;color:#fff;width:100%}
+.btn-sell:hover{filter:brightness(1.1)}
+.btn-ghost{background:#2b3139;color:#eaecef;border:1px solid #3a404a}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px}
+.kpi-card{background:#181a20;border:1px solid #2b3139;border-radius:14px;padding:12px}
+.kpi-card h4{margin:0 0 6px 0;font-size:11px;letter-spacing:0.6px;opacity:0.7}
+.kpi-card b{font-family:JetBrains Mono,monospace;font-size:18px}
+.chart-wrap{height:360px;padding:8px}
+.order-form{padding:12px;display:grid;gap:10px}
+.input{background:#0b0e11;border:1px solid #2b3139;border-radius:10px;padding:10px 12px;color:#eaecef;width:100%;outline:none}
+.input:focus{border-color:#f0b90b}
+.segment{display:flex;background:#0b0e11;border-radius:10px;padding:4px;border:1px solid #2b3139}
+.segment button{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:#848e9c;cursor:pointer;font-weight:700}
+.segment button.active{background:#f0b90b;color:#111}
+.table{width:100%;border-collapse:collapse;font-size:12px;font-family:JetBrains Mono,monospace}
+.table th{opacity:0.6;font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid #2b3139}
+.table td{padding:8px 10px;border-bottom:1px solid rgba(43,49,57,0.5)}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:10px}
