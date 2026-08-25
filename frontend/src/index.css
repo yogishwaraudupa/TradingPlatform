@@ -5,9 +5,11 @@ body{margin:0;font-family:Inter,system-ui;background:#0b0e11;color:#eaecef;overf
 .header{position:sticky;top:0;z-index:20;background:rgba(24,26,32,0.95);backdrop-filter:blur(12px);border-bottom:1px solid #2b3139;display:flex;align-items:center;gap:12px;padding:10px 14px;flex-wrap:wrap}
 .logo{font-weight:700;letter-spacing:0.5px;display:flex;gap:8px;align-items:center;white-space:nowrap}
 .logo span{color:#f0b90b}
-.ticker{display:flex;gap:8px;overflow-x:auto;white-space:nowrap;background:#181a20;border-bottom:1px solid #2b3139;padding:6px 10px;font-family:JetBrains Mono,monospace;font-size:11px;scrollbar-width:none}
-.ticker::-webkit-scrollbar{display:none}
+.ticker{overflow:hidden;white-space:nowrap;background:#14181f;border-bottom:1px solid #2b3139;padding:4px 0;font-family:JetBrains Mono,monospace;font-size:10px;height:26px;display:flex;align-items:center}
+.ticker-track{display:flex;gap:14px;animation:marquee 40s linear infinite;will-change:transform;align-items:center}
+.ticker:hover .ticker-track{animation-play-state:paused}
 .ticker span{opacity:0.95;flex-shrink:0}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .chart-wrap{height:360px;padding:8px;scroll-margin-top:80px}
 .badge{font-size:11px;padding:3px 7px;border-radius:999px;background:#2b3139;border:1px solid #3a404a;white-space:nowrap;flex-shrink:0}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto;scrollbar-width:none}
