@@ -12,7 +12,63 @@ const CLASSES = [
   { id:'index', label:'INDEX', icon:'📊' },
 ]
 
+function Login({ onLogin }){
+  const [userid, setUserid] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e)=>{
+    e.preventDefault()
+    if(!userid.trim() || !password.trim()){ setError('User ID and Password required'); return }
+    setLoading(true); setError('')
+    try{
+      // case-insensitive: backend lowercases both, accepts any credentials
+      const { data } = await axios.post(`${API}/api/auth/login`, { userid, email: userid, password })
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      onLogin(data.user)
+    }catch(err){
+      // fallback: demo mode - accept any credentials locally if backend fails
+      const mockUser = { email: userid.toLowerCase().trim(), name: userid }
+      localStorage.setItem('token', 'demo_token')
+      localStorage.setItem('user', JSON.stringify(mockUser))
+      onLogin(mockUser)
+    }finally{ setLoading(false)}
+  }
+
+  return (
+    <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'radial-gradient(800px 400px at 50% -10%, rgba(240,185,11,0.15), transparent), #0b0e11', padding:16}}>
+      <div style={{width:'100%', maxWidth:400, background:'#1e2329', border:'1px solid #2b3139', borderRadius:20, padding:28, boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
+        <div style={{textAlign:'center', marginBottom:20}}>
+          <div style={{display:'inline-flex', alignItems:'center', gap:8, background:'#f0b90b', color:'#111', padding:'6px 12px', borderRadius:10, fontWeight:800, fontSize:13}}>◼ TRADING TERMINAL</div>
+          <h2 style={{margin:'14px 0 6px 0'}}>Welcome back</h2>
+          <p style={{opacity:0.6, fontSize:13, margin:0}}>Login • Any User ID / Password works • Case-insensitive</p>
+        </div>
+        <form onSubmit={handleSubmit} style={{display:'grid', gap:12}}>
+          <div>
+            <label style={{fontSize:12,opacity:0.7}}>User ID</label>
+            <input className="input" placeholder="e.g. admin, trader01, DEMO" value={userid} onChange={e=>setUserid(e.target.value)} autoFocus />
+          </div>
+          <div>
+            <label style={{fontSize:12,opacity:0.7}}>Password</label>
+            <input className="input" type="password" placeholder="e.g. 1234, Password, ANY" value={password} onChange={e=>setPassword(e.target.value)} />
+          </div>
+          {error && <div style={{color:'#f6465d', fontSize:12, background:'rgba(246,70,93,0.12)', padding:'8px 10px', borderRadius:8, border:'1px solid rgba(246,70,93,0.3)'}}>{error}</div>}
+          <button type="submit" className="btn" style={{background:'#f0b90b', color:'#111', fontSize:15, padding:'12px', marginTop:4}} disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign In →'}
+          </button>
+          <div style={{textAlign:'center', fontSize:11, opacity:0.5, lineHeight:1.4}}>
+            Demo mode: <b>any</b> ID & password accepted<br/>Try: <code>admin / 1234</code> , <code>ADMIN / 1234</code> , <code>Demo / demo</code>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function App(){
+  const [user, setUser] = useState(()=>{ try{ return JSON.parse(localStorage.getItem('user')||'null')}catch{return null}})
   const [prices, setPrices] = useState([])
   const [cls, setCls] = useState('crypto')
   const [selected, setSelected] = useState('BTC-USD')
@@ -22,8 +78,11 @@ export default function App(){
   const [orderType, setOrderType] = useState('MARKET')
   const [candles, setCandles] = useState([])
 
+  const handleLogout = ()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); setUser(null) }
+
   // live prices: websocket + fallback polling for Vercel serverless
   useEffect(()=>{
+    if(!user) return
     let socket
     try {
       socket = io(API, { transports:['websocket','polling'] })
@@ -34,21 +93,22 @@ export default function App(){
       try{ const {data}=await axios.get(`${API}/api/market/prices`); if(data.length) setPrices(data)}catch{}
     }, 3000)
     return ()=>{ try{socket?.disconnect()}catch{}; clearInterval(poll)}
-  },[])
+  },[user])
 
   useEffect(()=>{
+    if(!user) return
     axios.get(`${API}/api/portfolio`).then(r=>setPortfolio(r.data)).catch(()=>{})
     axios.get(`${API}/api/orders`).then(r=>setOrders(r.data)).catch(()=>{})
-  },[])
+  },[user])
 
   useEffect(()=>{
+    if(!user) return
     axios.get(`${API}/api/market/candle/${selected}`).then(r=>setCandles(r.data.candles||[])).catch(()=>setCandles([]))
-  },[selected])
+  },[selected, user])
 
   const filtered = useMemo(()=> prices.filter(p=>p.assetClass===cls), [prices, cls])
   const selPrice = useMemo(()=> prices.find(p=>p.symbol===selected), [prices, selected])
 
-  // auto-select first symbol of class
   useEffect(()=>{ if(filtered.length && !filtered.find(f=>f.symbol===selected)) setSelected(filtered[0].symbol)},[filtered])
 
   const placeOrder = async (side)=>{
@@ -60,24 +120,25 @@ export default function App(){
     }catch(e){ alert(e?.response?.data?.error || e.message)}
   }
 
+  if(!user) return <Login onLogin={setUser} />
+
   return (
     <div>
-      {/* Header */}
       <div className="header">
         <div className="logo"> <span style={{background:'#f0b90b', color:'#111', padding:'4px 8px', borderRadius:8, fontSize:12}}>◼</span> TRADING<span>TERMINAL</span> <span className="badge">PRO • 5 ASSETS</span></div>
         <div className="tabs">
           {CLASSES.map(c=> <button key={c.id} onClick={()=>setCls(c.id)} className={`tab ${cls===c.id?'active':''}`}>{c.icon} {c.label}</button>)}
         </div>
         <div style={{marginLeft:'auto', display:'flex', gap:10, alignItems:'center'}}>
+          <div className="badge">Hi, {user.name || user.email} </div>
           <div className="badge">Cash ${portfolio?.cash?.toLocaleString() ?? '—'}</div>
           <div className="badge" style={{background: (portfolio?.totalPnl??0)>=0?'rgba(14,203,129,0.15)':'rgba(246,70,93,0.15)', borderColor:(portfolio?.totalPnl??0)>=0?'#0ecb81':'#f6465d'}}>
             P&L <span className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnl ?? 0}</span>
           </div>
-          <button className="btn btn-ghost" onClick={()=>window.open('https://github.com/yogishwaraudupa/TradingPlatform','_blank')}>GitHub</button>
+          <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
         </div>
       </div>
 
-      {/* Ticker */}
       <div className="ticker">
         {prices.slice(0,12).map(p=> (
           <span key={p.symbol}>{p.symbol} <b className={p.change>=0?'price-up':'price-down'}>{p.price}</b> <small style={{opacity:0.6}}>{p.change>0?'+':''}{p.change}%</small></span>
@@ -86,7 +147,6 @@ export default function App(){
       </div>
 
       <div className="layout">
-        {/* Left - Watchlist */}
         <div className="panel">
           <div className="panel-h"><span>{cls.toUpperCase()} • WATCHLIST</span><span className="badge">{filtered.length}</span></div>
           <div style={{maxHeight:420, overflowY:'auto'}}>
@@ -104,7 +164,6 @@ export default function App(){
           </div>
         </div>
 
-        {/* Center - Chart + Grid */}
         <div className="panel">
           <div className="panel-h">
             <div><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span></div>
@@ -130,7 +189,6 @@ export default function App(){
           </div>
         </div>
 
-        {/* Right - Order Ticket + Portfolio */}
         <div style={{display:'grid', gap:12}}>
           <div className="panel">
             <div className="panel-h"><span>ORDER TICKET</span><span className="badge">{selected}</span></div>
