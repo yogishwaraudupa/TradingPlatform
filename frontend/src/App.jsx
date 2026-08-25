@@ -227,7 +227,27 @@ export default function App(){
           <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
         </div>
       </div>
-      <div className="ticker">{prices.slice(0,12).map(p=> <span key={p.symbol}>{p.symbol} <b className={p.change>=0?'price-up':'price-down'}>{p.price}</b> <small style={{opacity:0.6}}>{p.change>0?'+':''}{p.change}%</small></span>)} {prices.length===0 && <span>Connecting...</span>}</div>
+      <div className="ticker" style={{display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none', cursor:'default'}}>
+        {prices.slice(0,20).map(p=> (
+          <span key={p.symbol} onClick={()=>{
+            setSelected(p.symbol)
+            if(p.assetClass) setCls(p.assetClass)
+            // smooth scroll to chart
+            document.querySelector('.chart-wrap')?.scrollIntoView({behavior:'smooth', block:'center'})
+          }} title={`Click to open ${p.symbol} chart • ${p.assetClass} • ${p.price}`}
+            style={{
+              cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6,
+              padding:'4px 10px', borderRadius:999, flexShrink:0,
+              background: selected===p.symbol ? 'rgba(240,185,11,0.18)' : 'rgba(43,49,57,0.6)',
+              border: selected===p.symbol ? '1px solid #f0b90b' : '1px solid transparent',
+              transition:'0.15s'
+            }} onMouseEnter={e=> e.currentTarget.style.background='rgba(43,49,57,0.9)'} onMouseLeave={e=> e.currentTarget.style.background= selected===p.symbol ? 'rgba(240,185,11,0.18)' : 'rgba(43,49,57,0.6)'}>
+            <b style={{fontSize:11}}>{p.symbol}</b> <b className={p.change>=0?'price-up':'price-down'} style={{fontSize:11}}>{p.price}</b> <small style={{opacity:0.6, fontSize:10}}>{p.change>0?'+':''}{p.change}%</small> <span style={{opacity:0.4, fontSize:9}}>{p.assetClass==='stocks'?'📈': p.assetClass==='crypto'?'₿': p.assetClass==='forex'?'💱': p.assetClass==='commodity'?'🥇':'📊'}</span>
+          </span>
+        ))}
+        {prices.length===0 && <span>Connecting...</span>}
+        <span style={{marginLeft:'auto', opacity:0.5, fontSize:10, whiteSpace:'nowrap', flexShrink:0, alignSelf:'center', paddingRight:8}}>↔ click any ticker to open chart + info</span>
+      </div>
 
       <div className="layout">
         <div className="panel">
