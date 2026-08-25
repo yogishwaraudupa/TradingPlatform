@@ -29,12 +29,13 @@ export default function Portfolio({ onClose }){
   const pieData = data.positions.map(p=>({ name:p.symbol, value:p.currentValue }))
 
   return (
-    <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)', zIndex:50, overflow:'auto', padding:16}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{maxWidth:1100, margin:'20px auto', background:'#1e2329', border:'1px solid #2b3139', borderRadius:16, overflow:'hidden'}}>
-        <div style={{padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #2b3139'}}>
-          <h2 style={{margin:0, fontSize:16}}>📁 Portfolio • {data.positions.length} holdings • Net Worth ${data.netWorth?.toLocaleString()}</h2>
-          <button className="btn btn-ghost" onClick={onClose}>✕ Close</button>
+    <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(8px)', zIndex:50, overflow:'auto', padding:12}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{maxWidth:1100, margin:'10px auto', background:'#1e2329', border:'1px solid #2b3139', borderRadius:16, overflow:'hidden', maxHeight:'96vh', display:'flex', flexDirection:'column'}}>
+        <div style={{padding:'12px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #2b3139', flexShrink:0, flexWrap:'wrap', gap:8}}>
+          <h2 style={{margin:0, fontSize:15, lineHeight:1.2}}>📁 Portfolio • {data.positions.length} holdings • Net Worth ${data.netWorth?.toLocaleString()}</h2>
+          <button className="btn btn-ghost" onClick={onClose} style={{flexShrink:0}}>✕ Close</button>
         </div>
+        <div style={{overflow:'auto', flex:1}}>
 
         {/* KPI Cards */}
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:10, padding:12}}>
@@ -46,27 +47,27 @@ export default function Portfolio({ onClose }){
           <div className="kpi-card"><h4>NET WORTH</h4><b>${data.netWorth.toLocaleString()}</b><div style={{fontSize:11,opacity:0.6}}>Cash + Holdings</div></div>
         </div>
 
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, padding:12}}>
-          <div className="panel">
+        <div className="portfolio-grid">
+          <div className="panel" style={{minWidth:0}}>
             <div className="panel-h">ALLOCATION</div>
             <div style={{height:220}}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({name, percent})=>`${name} ${(percent*100).toFixed(0)}%`}>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({name, percent})=>`${name} ${(percent*100).toFixed(0)}%`}>
                     {pieData.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} />)}
                   </Pie>
                   <Tooltip contentStyle={{background:'#181a20', border:'1px solid #2b3139', borderRadius:8}} />
-                  <Legend />
+                  <Legend wrapperStyle={{fontSize:11}} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="panel">
+          <div className="panel" style={{minWidth:0}}>
             <div className="panel-h">PERFORMANCE (30D)</div>
             <div style={{height:220, padding:8}}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={history}>
-                  <XAxis dataKey="date" hide /><YAxis tick={{fontSize:10, fill:'#848e9c'}} width={60} domain={['dataMin-500','dataMax+500']} />
+                  <XAxis dataKey="date" hide /><YAxis tick={{fontSize:10, fill:'#848e9c'}} width={55} domain={['dataMin-500','dataMax+500']} />
                   <Tooltip contentStyle={{background:'#181a20', border:'1px solid #2b3139', borderRadius:8}} />
                   <Area type="monotone" dataKey="value" stroke="#f0b90b" fill="rgba(240,185,11,0.15)" strokeWidth={2} dot={false}/>
                 </AreaChart>
@@ -77,10 +78,10 @@ export default function Portfolio({ onClose }){
 
         {/* Holdings Table */}
         <div style={{padding:12}}>
-          <div className="panel">
-            <div className="panel-h"><span>HOLDINGS • {data.positions.length}</span><div style={{display:'flex', gap:6, alignItems:'center'}}><input className="input" style={{width:110, padding:'6px 8px', fontSize:12}} value={addSymbol} onChange={e=>setAddSymbol(e.target.value.toUpperCase())} placeholder="SYMBOL" /><input className="input" style={{width:70, padding:'6px 8px', fontSize:12}} type="number" value={addQty} onChange={e=>setAddQty(e.target.value)} /><button className="btn" style={{background:'#f0b90b', color:'#111', padding:'6px 10px', fontSize:12}} onClick={handleAdd}>+ Add</button></div></div>
+          <div className="panel" style={{minWidth:0}}>
+            <div className="panel-h" style={{flexWrap:'wrap', gap:8}}><span>HOLDINGS • {data.positions.length}</span><div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap'}}><input className="input" style={{width:110, padding:'6px 8px', fontSize:12}} value={addSymbol} onChange={e=>setAddSymbol(e.target.value.toUpperCase())} placeholder="SYMBOL" /><input className="input" style={{width:70, padding:'6px 8px', fontSize:12}} type="number" value={addQty} onChange={e=>setAddQty(e.target.value)} /><button className="btn" style={{background:'#f0b90b', color:'#111', padding:'6px 10px', fontSize:12}} onClick={handleAdd}>+ Add</button></div></div>
             <div style={{overflow:'auto'}}>
-              <table className="table" style={{minWidth:900}}>
+              <table className="table" style={{minWidth:860}}>
                 <thead><tr><th>SYMBOL</th><th>CLASS</th><th>QTY</th><th>AVG</th><th>LTP</th><th>INVESTED</th><th>CUR VALUE</th><th>P&L</th><th>P&L%</th><th>ALLOC</th><th>DAY</th></tr></thead>
                 <tbody>
                   {data.positions.map(p=>(
@@ -102,6 +103,7 @@ export default function Portfolio({ onClose }){
               </table>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
