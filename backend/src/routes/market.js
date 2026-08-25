@@ -112,9 +112,20 @@ router.get('/countries', (req,res)=>{
   res.json(Object.keys(COUNTRY_EXCHANGES).map(k=>({ id:k, label: k.charAt(0).toUpperCase()+k.slice(1), exchanges: COUNTRY_EXCHANGES[k].slice(0,3) })))
 });
 
+// GET /api/market/category/:category -> category-wise prices (us_stocks, india_stocks, india_indices etc)
+router.get('/category/:category', (req,res)=>{
+  const { category } = req.params
+  const { getPricesByCategory } = require('../services/marketData')
+  try{
+    const data = getPricesByCategory(category)
+    if(!data || data.length===0) return res.status(404).json({error:'Unknown category', category})
+    res.json(data)
+  }catch(e){ res.status(500).json({error:e.message}) }
+});
+
 // GET /api/market/symbols
 router.get('/symbols', (req, res) => {
-  res.json({ assets: ASSETS, yahooMap: YAHOO_MAP });
+  res.json({ assets: ASSETS, yahooMap: YAHOO_MAP, categories: require('../services/marketData').CATEGORY_GROUPS });
 });
 
 // GET /api/market/quote/:symbol -> live single quote from Yahoo
