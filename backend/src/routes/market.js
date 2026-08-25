@@ -22,6 +22,96 @@ router.get('/prices', async (req, res) => {
   res.json(getAllPrices());
 });
 
+// Country -> exchange mapping for country-wise search
+const COUNTRY_EXCHANGES = {
+  india: ['NSE','BSE','NS','BO','Bombay','National Stock'],
+  usa: ['NYSE','NASDAQ','Nasdaq','NYQ','NMS','NGM','NYSEMkt','NYSEArca','OTC','NYSE MKT'],
+  uk: ['LSE','London','AIM'],
+  japan: ['TSE','Tokyo','JPX','Osaka'],
+  germany: ['GER','Xetra','Frankfurt','XETRA','HAM','MUN'],
+  china: ['HKG','Hong Kong','SHA','SHE','SSE','SZSE'],
+  canada: ['TOR','TSX','Toronto','Venture'],
+  australia: ['ASX','Sydney','AX'],
+  france: ['PAR','Paris','EPA'],
+  singapore: ['SES','Singapore','SGX'],
+  hongkong: ['HKG','Hong Kong','HK'],
+  brazil: ['SAO','Sao Paulo','BVMF'],
+};
+
+function exchangeToCountry(exch){
+  if(!exch) return 'global'
+  const e = exch.toUpperCase()
+  for(const [country, patterns] of Object.entries(COUNTRY_EXCHANGES)){
+    if(patterns.some(p=> e.includes(p.toUpperCase()))) return country
+  }
+  // also detect suffix
+  if(e.endsWith('.NS') || e.endsWith('.BO') || e==='NSE' || e==='BSE') return 'india'
+  if(e.endsWith('.L')) return 'uk'
+  if(e.endsWith('.T') || e.endsWith('.JP')) return 'japan'
+  if(e.endsWith('.DE') || e.endsWith('.F')) return 'germany'
+  if(e.endsWith('.HK') || e.endsWith('.SS') || e.endsWith('.SZ')) return 'china'
+  if(e.endsWith('.TO') || e.endsWith('.V')) return 'canada'
+  if(e.endsWith('.AX')) return 'australia'
+  if(e.endsWith('.PA')) return 'france'
+  if(e.endsWith('.SI')) return 'singapore'
+  if(e==='NYSE' || e==='NASDAQ' || e.includes('NASDAQ')) return 'usa'
+  return 'global'
+}
+
+// GET /api/market/search?q=RELIANCE -> Yahoo search with country-wise filter
+router.get('/search', async (req,res)=>{
+  const q = (req.query.q || '').trim()
+  if(!q) return res.json([])
+  const typeFilter = (req.query.type || '').toLowerCase() // stocks,index,commodity,forex,crypto
+  const countryFilter = (req.query.country || '').toLowerCase() // india,usa,uk,japan,germany etc or all
+  try{
+    const { data } = await axios.get(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}`, {
+      headers:{'User-Agent':'Mozilla/5.0', 'Accept':'application/json'},
+      timeout:5000
+    })
+    let quotes = (data.quotes||[]).slice(0,25).map(x=>{
+      const exch = x.exchDisp || x.exchange || ''
+      const country = exchangeToCountry(exch || x.symbol)
+      return {
+        symbol: x.symbol,
+        name: x.shortname || x.longname || x.symbol,
+        longName: x.longname,
+        exchange: exch,
+        quoteType: x.quoteType, // EQUITY, INDEX, FUTURE, ETF, CURRENCY, CRYPTOCURRENCY
+        score: x.score,
+        country,
+        assetClass: x.quoteType==='INDEX' ? 'index' : x.quoteType==='FUTURE' ? 'commodity' : x.quoteType==='CURRENCY' ? 'forex' : x.quoteType==='CRYPTOCURRENCY' ? 'crypto' : 'stocks'
+      }
+    })
+    if(typeFilter){
+      const map={stocks:['EQUITY','ETF'], index:['INDEX'], commodity:['FUTURE'], forex:['CURRENCY'], crypto:['CRYPTOCURRENCY']}
+      const allowed = map[typeFilter] || []
+      if(allowed.length) quotes = quotes.filter(x=> allowed.includes(x.quoteType))
+    }
+    if(countryFilter && countryFilter!=='all'){
+      quotes = quotes.filter(x=> x.country===countryFilter)
+      // if country filter yields 0, fallback to showing all but sorted with country matches first
+      if(quotes.length===0){
+        // no strict match, try looser: symbol suffix
+        const suffixMap={india:['.NS','.BO'], usa:[], uk:['.L'], japan:['.T','.JP'], germany:['.DE','.F'], china:['.HK','.SS','.SZ'], canada:['.TO','.V'], australia:['.AX'], france:['.PA'], singapore:['.SI']}
+        const suffixes = suffixMap[countryFilter] || []
+        // already filtered to 0, just return empty but add hint
+      }
+    }
+    // limit 15 after filter
+    quotes = quotes.slice(0,15)
+    res.json(quotes)
+  }catch(e){
+    console.log('search failed', e.message)
+    res.status(500).json({ error: e.message, q })
+  }
+});
+
+// GET /api/market/countries -> list supported countries for stocks/indices
+router.get('/countries', (req,res)=>{
+  res.json(Object.keys(COUNTRY_EXCHANGES).map(k=>({ id:k, label: k.charAt(0).toUpperCase()+k.slice(1), exchanges: COUNTRY_EXCHANGES[k].slice(0,3) })))
+});
+
 // GET /api/market/symbols
 router.get('/symbols', (req, res) => {
   res.json({ assets: ASSETS, yahooMap: YAHOO_MAP });

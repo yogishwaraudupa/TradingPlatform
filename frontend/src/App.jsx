@@ -119,6 +119,12 @@ export default function App(){
   const [chartType, setChartType] = useState('candle') // candle | line | area
   const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false })
   const [showPortfolio, setShowPortfolio] = useState(false)
+  const [searchQ, setSearchQ] = useState('')
+  const [searchRes, setSearchRes] = useState([])
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [customSymbols, setCustomSymbols] = useState([])
+  const [country, setCountry] = useState('all')
+  const [countries, setCountries] = useState([])
 
   const handleLogout = ()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); setUser(null) }
 
@@ -128,12 +134,47 @@ export default function App(){
     const poll=setInterval(async()=>{ try{ const {data}=await axios.get(`${API}/api/market/prices`); if(data.length) setPrices(data)}catch{}},3000)
     return ()=>{ try{socket?.disconnect()}catch{}; clearInterval(poll)}
   },[user])
-  useEffect(()=>{ if(!user) return; axios.get(`${API}/api/portfolio`).then(r=>setPortfolio(r.data)).catch(()=>{}); axios.get(`${API}/api/orders`).then(r=>setOrders(r.data)).catch(()=>{})},[user])
+  useEffect(()=>{ if(!user) return; axios.get(`${API}/api/portfolio`).then(r=>setPortfolio(r.data)).catch(()=>{}); axios.get(`${API}/api/orders`).then(r=>setOrders(r.data)).catch(()=>{}); axios.get(`${API}/api/market/countries`).then(r=>setCountries(r.data)).catch(()=>{})},[user])
   useEffect(()=>{ if(!user) return; axios.get(`${API}/api/market/candle/${selected}`).then(r=>setCandles(r.data.candles||[])).catch(()=>setCandles([]))},[selected,user])
 
-  const filtered = useMemo(()=> prices.filter(p=>p.assetClass===cls), [prices,cls])
+  const allPrices = useMemo(()=> [...prices, ...customSymbols.filter(c=>!prices.find(p=>p.symbol===c.symbol))], [prices, customSymbols])
+  const filtered = useMemo(()=> allPrices.filter(p=>p.assetClass===cls), [allPrices,cls])
   const selPrice = useMemo(()=> prices.find(p=>p.symbol===selected), [prices,selected])
-  useEffect(()=>{ if(filtered.length && !filtered.find(f=>f.symbol===selected)) setSelected(filtered[0].symbol)},[filtered])
+  // search debounce with country filter
+  useEffect(()=>{
+    if(!searchQ.trim()){ setSearchRes([]); setSearchOpen(false); return }
+    const t=setTimeout(async()=>{
+      try{
+        const { data } = await axios.get(`${API}/api/market/search?q=${encodeURIComponent(searchQ)}&country=${country}`)
+        setSearchRes(Array.isArray(data)? data : [])
+        setSearchOpen(true)
+      }catch{ setSearchRes([])}
+    },400)
+    return ()=>clearTimeout(t)
+  },[searchQ, country])
+
+  const handleSelectSearch = (item)=>{
+    const sym = item.symbol
+    // add to custom watchlist if not in ASSETS
+    if(!prices.find(p=>p.symbol===sym) && !customSymbols.find(c=>c.symbol===sym)){
+      setCustomSymbols(prev=>[...prev, { symbol: sym, price: 0, assetClass: item.assetClass, change:0, name:item.name }])
+    }
+    setSelected(sym)
+    // switch tab to item's class for context
+    if(item.assetClass) setCls(item.assetClass)
+    setSearchQ(''); setSearchOpen(false)
+  }
+
+  // fallback quote for custom searched symbols not in prices
+  useEffect(()=>{
+    if(!selected || prices.find(p=>p.symbol===selected)) return
+    axios.get(`${API}/api/market/quote/${encodeURIComponent(selected)}`).then(r=>{
+      const q=r.data
+      if(q && q.price) setPrices(prev=>[...prev, { symbol:selected, price:q.price, assetClass: q.quoteType ? (q.quoteType==='INDEX'?'index': q.quoteType==='FUTURE'?'commodity':'stocks') : 'stocks', change: q.changePercent||0, source:'real' }])
+    }).catch(()=>{})
+  },[selected])
+
+  useEffect(()=>{ if(filtered.length && !filtered.find(f=>f.symbol===selected) && !customSymbols.find(c=>c.symbol===selected)) setSelected(filtered[0].symbol)},[filtered])
   const enriched = useMemo(()=> enrich(candles), [candles])
 
   const placeOrder = async (side)=>{
@@ -148,7 +189,37 @@ export default function App(){
       <div className="header">
         <div className="logo"><span style={{background:'#f0b90b', color:'#111', padding:'4px 8px', borderRadius:8, fontSize:12}}>◼</span> TRADING<span>TERMINAL</span> <span className="badge">PRO • 5 ASSETS</span></div>
         <div className="tabs">{CLASSES.map(c=> <button key={c.id} onClick={()=>setCls(c.id)} className={`tab ${cls===c.id?'active':''}`}>{c.icon} {c.label}</button>)}</div>
-        <div style={{marginLeft:'auto', display:'flex', gap:10, alignItems:'center'}}>
+        <div style={{position:'relative', marginLeft:8, display:'flex', gap:6}}>
+          <div style={{position:'relative'}}>
+            <input className="input" style={{width:260, padding:'8px 12px 8px 32px', fontSize:12, background:'#0b0e11'}} placeholder="🔍 Search all: AAPL, NIFTY, GOLD, TCS..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} onFocus={()=>searchRes.length&&setSearchOpen(true)} />
+            <span style={{position:'absolute', left:10, top:9, opacity:0.5, fontSize:12}}>🔍</span>
+            {searchOpen && searchRes.length>0 && (
+              <div style={{position:'absolute', top:42, left:0, right:0, width:380, background:'#1e2329', border:'1px solid #2b3139', borderRadius:12, zIndex:30, maxHeight:360, overflow:'auto', boxShadow:'0 10px 30px rgba(0,0,0,0.5)'}}>
+                {searchRes.map(r=>(
+                  <div key={r.symbol} onClick={()=>handleSelectSearch(r)} style={{padding:'10px 12px', cursor:'pointer', borderBottom:'1px solid rgba(43,49,57,0.4)', display:'flex', justifyContent:'space-between', alignItems:'center'}} className="watch-item">
+                    <div><div className="sym" style={{fontSize:12}}>{r.symbol} <span className="badge" style={{fontSize:10, marginLeft:6}}>{r.quoteType}</span> <span className="badge" style={{fontSize:9, background:'#181a20'}}>{r.country.toUpperCase()}</span></div><div style={{fontSize:11, opacity:0.6, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:200}}>{r.name} • {r.exchange}</div></div>
+                    <div className="badge" style={{background: r.assetClass==='index'?'rgba(0,191,255,0.15)': r.assetClass==='commodity'?'rgba(255,140,0,0.15)': r.assetClass==='crypto'?'rgba(167,139,250,0.15)':'#2b3139', fontSize:10}}>{r.assetClass.toUpperCase()}</div>
+                  </div>
+                ))}
+                <div style={{padding:'6px 12px', fontSize:10, opacity:0.5, textAlign:'center'}}>Yahoo Finance • {searchRes.length} results for "{searchQ}" {country!=='all' && `• ${country.toUpperCase()}`}</div>
+              </div>
+            )}
+          </div>
+          <select value={country} onChange={e=>setCountry(e.target.value)} className="input" style={{width:130, padding:'8px', fontSize:11, background:'#1e2329'}}>
+            <option value="all">🌍 All Countries</option>
+            <option value="india">🇮🇳 India (NSE/BSE)</option>
+            <option value="usa">🇺🇸 USA (NYSE/NASDAQ)</option>
+            <option value="uk">🇬🇧 UK (LSE)</option>
+            <option value="japan">🇯🇵 Japan (TSE)</option>
+            <option value="germany">🇩🇪 Germany (Xetra)</option>
+            <option value="china">🇨🇳 China/HK</option>
+            <option value="canada">🇨🇦 Canada (TSX)</option>
+            <option value="australia">🇦🇺 Australia (ASX)</option>
+            <option value="france">🇫🇷 France</option>
+            <option value="singapore">🇸🇬 Singapore</option>
+          </select>
+        </div>
+        <div style={{marginLeft:'auto', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
           <div className="badge">Hi, {user.name||user.email}</div>
           <button className="btn" style={{background:'#f0b90b', color:'#111', padding:'6px 12px', fontSize:12}} onClick={()=>setShowPortfolio(true)}>📁 Portfolio</button>
           <div className="badge">Cash ${portfolio?.cash?.toLocaleString() ?? '—'}</div>
