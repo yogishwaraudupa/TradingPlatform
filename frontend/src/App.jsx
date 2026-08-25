@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { io } from 'socket.io-client'
 import axios from 'axios'
 import { ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
+import Portfolio from './Portfolio.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const CLASSES = [
@@ -117,6 +118,7 @@ export default function App(){
   const [candles, setCandles] = useState([])
   const [chartType, setChartType] = useState('candle') // candle | line | area
   const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false })
+  const [showPortfolio, setShowPortfolio] = useState(false)
 
   const handleLogout = ()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); setUser(null) }
 
@@ -148,6 +150,7 @@ export default function App(){
         <div className="tabs">{CLASSES.map(c=> <button key={c.id} onClick={()=>setCls(c.id)} className={`tab ${cls===c.id?'active':''}`}>{c.icon} {c.label}</button>)}</div>
         <div style={{marginLeft:'auto', display:'flex', gap:10, alignItems:'center'}}>
           <div className="badge">Hi, {user.name||user.email}</div>
+          <button className="btn" style={{background:'#f0b90b', color:'#111', padding:'6px 12px', fontSize:12}} onClick={()=>setShowPortfolio(true)}>📁 Portfolio</button>
           <div className="badge">Cash ${portfolio?.cash?.toLocaleString() ?? '—'}</div>
           <div className="badge" style={{background:(portfolio?.totalPnl??0)>=0?'rgba(14,203,129,0.15)':'rgba(246,70,93,0.15)'}}>P&L <span className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnl??0}</span></div>
           <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
@@ -268,14 +271,15 @@ export default function App(){
               <div style={{fontSize:11, opacity:0.6}}>Est. Value: ~${selPrice? (Number(qty)*selPrice.price).toFixed(2):0} • Fee 0.1%</div>
             </div>
           </div>
-          <div className="panel"><div className="panel-h"><span>PORTFOLIO</span><button className="btn btn-ghost" style={{padding:'4px 8px', fontSize:11}} onClick={async()=>{const {data}=await axios.get(`${API}/api/portfolio`); setPortfolio(data)}}>↻ Refresh</button></div>
-            <div style={{maxHeight:180, overflow:'auto'}}><table className="table"><thead><tr><th>SYMBOL</th><th>QTY</th><th>P&L</th></tr></thead><tbody>{portfolio?.positions?.map(pos=>(<tr key={pos.symbol}><td>{pos.symbol}</td><td>{pos.qty}</td><td className={pos.pnl>=0?'price-up':'price-down'}>{pos.pnl>0?'+':''}{pos.pnl}</td></tr>))} {!portfolio?.positions?.length && <tr><td colSpan="3" style={{opacity:0.6, padding:12}}>No positions</td></tr>}</tbody></table></div>
+          <div className="panel"><div className="panel-h"><span>PORTFOLIO</span><div style={{display:'flex', gap:6}}><button className="btn" style={{background:'#f0b90b', color:'#111', padding:'4px 8px', fontSize:11}} onClick={()=>setShowPortfolio(true)}>View Full →</button><button className="btn btn-ghost" style={{padding:'4px 8px', fontSize:11}} onClick={async()=>{const {data}=await axios.get(`${API}/api/portfolio`); setPortfolio(data)}}>↻</button></div></div>
+            <div style={{maxHeight:180, overflow:'auto'}}><table className="table"><thead><tr><th>SYMBOL</th><th>QTY</th><th>VALUE</th><th>P&L%</th></tr></thead><tbody>{portfolio?.positions?.slice(0,5).map(pos=>(<tr key={pos.symbol}><td><b>{pos.symbol}</b> <span style={{opacity:0.5, fontSize:10}}>{pos.assetClass}</span></td><td>{pos.qty}</td><td>${pos.currentValue?.toLocaleString()}</td><td className={pos.pnlPct>=0?'price-up':'price-down'}>{pos.pnlPct>0?'+':''}{pos.pnlPct}%</td></tr>))} {!portfolio?.positions?.length && <tr><td colSpan="4" style={{opacity:0.6, padding:12}}>No positions</td></tr>}</tbody></table><div style={{padding:'6px 10px', fontSize:11, opacity:0.6, borderTop:'1px solid #2b3139'}}>Total: ${portfolio?.totalValue?.toLocaleString()} • Invested ${portfolio?.totalInvested?.toLocaleString()} • <span className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnlPct}%</span> • Cash ${portfolio?.cash?.toLocaleString()}</div></div>
           </div>
           <div className="panel"><div className="panel-h"><span>ORDERS</span><span className="badge">{orders.length}</span></div>
             <div style={{maxHeight:180, overflow:'auto'}}><table className="table"><thead><tr><th>ID</th><th>SIDE</th><th>QTY</th><th>STATUS</th></tr></thead><tbody>{orders.slice(0,8).map(o=>(<tr key={o.id}><td>#{o.id}</td><td className={o.side==='BUY'?'price-up':'price-down'}>{o.side}</td><td>{o.symbol} x{o.qty}</td><td>{o.status}</td></tr>))} {orders.length===0 && <tr><td colSpan="4" style={{opacity:0.6, padding:12}}>No orders yet</td></tr>}</tbody></table></div>
           </div>
         </div>
       </div>
+      {showPortfolio && <Portfolio onClose={()=>setShowPortfolio(false)} />}
     </div>
   )
 }
