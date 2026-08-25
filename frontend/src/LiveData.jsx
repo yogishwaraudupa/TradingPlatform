@@ -78,17 +78,17 @@ export default function LiveData({ onClose, onSelect }){
             </thead>
             <tbody>
               {data.map((d,i)=>(
-                <tr key={d.symbol} style={{cursor:'pointer'}} onClick={()=>{ onSelect && onSelect(d.symbol, d.assetClass); onClose() }}>
+                <tr key={d.symbol} style={{cursor:'pointer'}} onClick={()=>{ onSelect && onSelect(d.symbol, d.assetClass||'stocks'); onClose() }}>
                   <td style={{opacity:0.5}}>{i+1}</td>
                   <td><b>{d.symbol}</b></td>
-                  <td><span className="badge" style={{fontSize:10, background: d.assetClass==='crypto'?'rgba(167,139,250,0.15)': d.assetClass==='index'?'rgba(0,191,255,0.15)': d.assetClass==='commodity'?'rgba(255,140,0,0.15)':'#2b3139'}}>{d.assetClass.toUpperCase()}</span></td>
+                  <td><span className="badge" style={{fontSize:10, background: (d.assetClass||'stocks')==='crypto'?'rgba(167,139,250,0.15)': (d.assetClass||'stocks')==='index'?'rgba(0,191,255,0.15)': (d.assetClass||'stocks')==='commodity'?'rgba(255,140,0,0.15)':'#2b3139'}}>{String(d.assetClass||'stocks').toUpperCase()}</span></td>
                   <td className="price">${d.price}</td>
                   <td className={d.change>=0?'price-up':'price-down'}>{d.change>0?'+':''}{d.change}</td>
                   <td className={d.change>=0?'price-up':'price-down'}>{d.change>0?'+':''}{Number(d.change||0).toFixed(2)}%</td>
                   <td style={{opacity:0.7}}>{d.prevClose ?? '—'}</td>
                   <td><span className="badge" style={{background: d.source==='real'?'rgba(14,203,129,0.15)':'rgba(132,142,156,0.2)', borderColor: d.source==='real'?'#0ecb81':'#2b3139', fontSize:10}}>{d.source==='real'?'● LIVE':'○ MOCK'}</span></td>
                   <td style={{fontSize:10, opacity:0.6}}>{d.lastUpdate ? new Date(d.lastUpdate).toLocaleTimeString() : '—'}</td>
-                  <td><button className="btn" style={{background:'#f0b90b', color:'#111', padding:'4px 8px', fontSize:10}} onClick={(e)=>{ e.stopPropagation(); onSelect && onSelect(d.symbol, d.assetClass); onClose() }}>Open Chart ↗</button></td>
+                  <td><button className="btn" style={{background:'#f0b90b', color:'#111', padding:'4px 8px', fontSize:10}} onClick={(e)=>{ e.stopPropagation(); onSelect && onSelect(d.symbol, d.assetClass||'stocks'); onClose() }}>Open Chart ↗</button></td>
                 </tr>
               ))}
               {data.length===0 && <tr><td colSpan={10} style={{textAlign:'center', padding:20, opacity:0.6}}>No data for {filter} — try ALL</td></tr>}

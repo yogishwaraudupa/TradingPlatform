@@ -44,7 +44,6 @@ const YAHOO_MAP = {
   'ITC.NS': 'ITC.NS',
   'KOTAKBANK.NS': 'KOTAKBANK.NS',
   'LT.NS': 'LT.NS',
-  'INFY': 'INFY.NS',
   // Crypto
   'BTC-USD': 'BTC-USD',
   'ETH-USD': 'ETH-USD',
@@ -117,7 +116,7 @@ async function ensureFresh(){
 function getAllPrices() {
   ensureFresh()
   return Object.entries(prices).map(([symbol, price]) => {
-    const assetClass = Object.keys(ASSETS).find(k => ASSETS[k].includes(symbol));
+    const assetClass = Object.keys(ASSETS).find(k => ASSETS[k].includes(symbol)) || 'stocks';
     const prev = prevClose[symbol] || price;
     const change = ((price - prev)/prev)*100;
     return { 
