@@ -126,6 +126,10 @@ export default function App(){
   const [customSymbols, setCustomSymbols] = useState([])
   const [country, setCountry] = useState('all')
   const [countries, setCountries] = useState([])
+  const [range, setRange] = useState('1d')
+  const [cagr, setCagr] = useState(20)
+  const [cagrPeriods, setCagrPeriods] = useState(90)
+  const [showCagr, setShowCagr] = useState(false)
 
   const handleLogout = ()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); setUser(null) }
 
@@ -136,7 +140,12 @@ export default function App(){
     return ()=>{ try{socket?.disconnect()}catch{}; clearInterval(poll)}
   },[user])
   useEffect(()=>{ if(!user) return; axios.get(`${API}/api/portfolio`).then(r=>setPortfolio(r.data)).catch(()=>{}); axios.get(`${API}/api/orders`).then(r=>setOrders(r.data)).catch(()=>{}); axios.get(`${API}/api/market/countries`).then(r=>setCountries(r.data)).catch(()=>{})},[user])
-  useEffect(()=>{ if(!user) return; axios.get(`${API}/api/market/candle/${selected}`).then(r=>setCandles(r.data.candles||[])).catch(()=>setCandles([]))},[selected,user])
+  useEffect(()=>{
+    if(!user) return;
+    const intervalMap = { '1d':'1m', '5d':'5m', '1mo':'30m', '3mo':'1d', '6mo':'1d', '1y':'1d', '2y':'1wk', '5y':'1wk', 'max':'1mo' }
+    const interval = intervalMap[range] || '1m'
+    axios.get(`${API}/api/market/candle/${selected}?range=${range}&interval=${interval}`).then(r=>setCandles(r.data.candles||[])).catch(()=>setCandles([]))
+  },[selected,user,range])
 
   const allPrices = useMemo(()=> [...prices, ...customSymbols.filter(c=>!prices.find(p=>p.symbol===c.symbol))], [prices, customSymbols])
   const filtered = useMemo(()=> allPrices.filter(p=>p.assetClass===cls), [allPrices,cls])
@@ -177,6 +186,20 @@ export default function App(){
 
   useEffect(()=>{ if(filtered.length && !filtered.find(f=>f.symbol===selected) && !customSymbols.find(c=>c.symbol===selected)) setSelected(filtered[0].symbol)},[filtered])
   const enriched = useMemo(()=> enrich(candles), [candles])
+  const cagrLine = useMemo(()=>{
+    if(!showCagr || !enriched.length) return []
+    const last = enriched[enriched.length-1]
+    const startPrice = last.close
+    const startTime = last.time
+    const dailyRate = Math.pow(1 + Number(cagr)/100, 1/252) - 1 // per trading day
+    const intervalMs = 86400000 // daily steps for projection
+    const points = []
+    for(let i=0;i<=Number(cagrPeriods);i++){
+      const value = startPrice * Math.pow(1+dailyRate, i)
+      points.push({ time: startTime + i*intervalMs, value: Number(value.toFixed(2)), label: `${cagr}% CAGR` })
+    }
+    return points
+  },[showCagr, enriched, cagr, cagrPeriods])
 
   const placeOrder = async (side)=>{
     if(!qty || qty<=0) return alert('Enter valid qty')
@@ -267,6 +290,22 @@ export default function App(){
               {['candle','line','area'].map(t=> <button key={t} onClick={()=>setChartType(t)} className={`tab ${chartType===t?'active':''}`} style={{padding:'6px 10px', fontSize:11}}>{t.toUpperCase()}</button>)}
             </div>
           </div>
+          {/* History Range + CAGR Tool */}
+          <div style={{display:'flex', gap:6, padding:'8px 12px', flexWrap:'wrap', alignItems:'center', borderBottom:'1px solid #2b3139', background:'#0b0e11'}}>
+            <span style={{fontSize:11, opacity:0.6}}>HISTORY:</span>
+            {['1d','5d','1mo','3mo','6mo','1y','2y','5y'].map(r=>(
+              <button key={r} onClick={()=>setRange(r)} className={`tab ${range===r?'active':''}`} style={{padding:'5px 8px', fontSize:10}}>{r.toUpperCase()}</button>
+            ))}
+            <span style={{marginLeft:8, fontSize:11, opacity:0.6}}>CAGR:</span>
+            <input type="number" value={cagr} onChange={e=>setCagr(e.target.value)} style={{width:60, padding:'5px 6px', fontSize:11, background:'#1e2329', border:'1px solid #2b3139', borderRadius:6, color:'#eaecef'}} placeholder="20" />
+            <span style={{fontSize:11}}>%</span>
+            <input type="number" value={cagrPeriods} onChange={e=>setCagrPeriods(e.target.value)} style={{width:55, padding:'5px 6px', fontSize:11, background:'#1e2329', border:'1px solid #2b3139', borderRadius:6, color:'#eaecef'}} placeholder="90" />
+            <span style={{fontSize:10, opacity:0.6}}>days</span>
+            <label style={{display:'flex', gap:4, alignItems:'center', background: showCagr?'#f0b90b':'#2b3139', color: showCagr?'#111':'#eaecef', padding:'4px 8px', borderRadius:999, fontSize:11, cursor:'pointer', fontWeight:600}}>
+              <input type="checkbox" checked={showCagr} onChange={e=>setShowCagr(e.target.checked)} style={{accentColor:'#f0b90b'}} /> {showCagr?'✓ PROJ':'SHOW'}
+            </label>
+            {showCagr && enriched.length>0 && <span style={{fontSize:10, opacity:0.6}}>→ {cagrLine[0]?.value} → {cagrLine[cagrLine.length-1]?.value?.toFixed(2)} {Number(cagr)>=0?'↗':'↘'}</span>}
+          </div>
           {/* Indicator toggles */}
           <div style={{display:'flex', gap:6, padding:'8px 12px', flexWrap:'wrap', borderBottom:'1px solid #2b3139', background:'#181a20'}}>
             <span style={{fontSize:11, opacity:0.6, alignSelf:'center'}}>INDICATORS:</span>
@@ -282,11 +321,11 @@ export default function App(){
           {/* Main Chart - TradingView style */}
           <div style={{height:360, background:'#0b0e11', borderBottom:'1px solid #2b3139'}}>
             {chartType==='candle' ? (
-              <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} />
+              <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} />
             ) : (
               <div style={{height:360, padding:8}}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={enriched} margin={{top:10, right:10, left:0, bottom:0}}>
+                  <ComposedChart data={showCagr ? [...enriched, ...cagrLine.map(p=>({time:p.time, cagr:p.value}))] : enriched} margin={{top:10, right:10, left:0, bottom:0}}>
                     <CartesianGrid stroke="rgba(43,49,57,0.5)" strokeDasharray="3 3" />
                     <XAxis dataKey="time" hide /><YAxis domain={['dataMin-2','dataMax+2']} tick={{fontSize:10, fill:'#848e9c'}} width={50} />
                     <Tooltip contentStyle={{background:'#181a20', border:'1px solid #2b3139', borderRadius:12, fontSize:12}} formatter={(v,n)=>[v,n]} labelFormatter={()=>selected} />
@@ -296,6 +335,7 @@ export default function App(){
                     {ind.sma50 && <Line type="monotone" dataKey="sma50" stroke="#ff8c00" dot={false} strokeWidth={1.5} />}
                     {ind.ema20 && <Line type="monotone" dataKey="ema20" stroke="#a78bfa" dot={false} strokeWidth={1.5} strokeDasharray="4 2" />}
                     {ind.bb && <><Line type="monotone" dataKey="bbUpper" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbLower" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbMid" stroke="rgba(132,142,156,0.5)" dot={false} strokeWidth={1} /></>}
+                    {showCagr && <Line type="monotone" dataKey="cagr" stroke="#f0b90b" dot={false} strokeWidth={2} strokeDasharray="6 4" />}
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>

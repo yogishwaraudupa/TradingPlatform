@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from 'react'
 import { createChart, ColorType, CrosshairMode } from 'lightweight-charts'
 
-export default function TradingViewChart({ data, symbol, showVolume=true, sma20Data, sma50Data, ema20Data }){
+export default function TradingViewChart({ data, symbol, showVolume=true, sma20Data, sma50Data, ema20Data, cagrLine }){
   const containerRef = useRef(null)
-  const chartRef = useRef(null)
 
   useEffect(()=>{
     if(!containerRef.current || !data.length) return
@@ -29,10 +28,8 @@ export default function TradingViewChart({ data, symbol, showVolume=true, sma20D
     }))
     candleSeries.setData(chartData)
 
-    // Volume
-    let volSeries
     if(showVolume){
-      volSeries = chart.addHistogramSeries({
+      const volSeries = chart.addHistogramSeries({
         priceScaleId: '',
         priceFormat: { type: 'volume' },
       })
@@ -44,28 +41,28 @@ export default function TradingViewChart({ data, symbol, showVolume=true, sma20D
       })))
     }
 
-    // SMA lines
-    const addLine = (key, color)=>{
+    const addLine = (key, color, dash)=>{
       if(!data[0] || data[0][key]==null) return
-      const line = chart.addLineSeries({ color, lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false })
+      const line = chart.addLineSeries({ color, lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, lineStyle: dash?2:0 })
       line.setData(data.filter(d=> d[key]!=null).map(d=> ({ time: Math.floor(d.time/1000), value: d[key] })))
       return line
     }
     if(sma20Data) addLine('sma20', '#00bfff')
     if(sma50Data) addLine('sma50', '#ff8c00')
-    if(ema20Data) addLine('ema20', '#a78bfa')
+    if(ema20Data) addLine('ema20', '#a78bfa', true)
 
-    // Last price line
+    // CAGR projection line (dashed yellow)
+    if(cagrLine && cagrLine.length){
+      const cagrSeries = chart.addLineSeries({ color: '#f0b90b', lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: true, title: `CAGR ${cagrLine[0]?.label||''}` })
+      cagrSeries.setData(cagrLine.map(d=> ({ time: Math.floor(d.time/1000), value: d.value })))
+    }
+
     chart.priceScale('right').applyOptions({ autoScale: true })
-
     chart.timeScale().fitContent()
-
     const handleResize = ()=> chart.applyOptions({ width: containerRef.current.clientWidth })
     window.addEventListener('resize', handleResize)
-
-    chartRef.current = chart
     return ()=>{ window.removeEventListener('resize', handleResize); chart.remove() }
-  }, [data, showVolume, sma20Data, sma50Data, ema20Data])
+  }, [data, showVolume, sma20Data, sma50Data, ema20Data, cagrLine])
 
   return <div ref={containerRef} style={{width:'100%', height:360}} />
 }

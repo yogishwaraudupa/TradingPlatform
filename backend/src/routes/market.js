@@ -143,15 +143,18 @@ router.get('/quote/:symbol', async (req,res)=>{
   }
 })
 
-// GET /api/market/candle/:symbol?interval=1m -> try Yahoo chart, fallback mock
+// GET /api/market/candle/:symbol?interval=1m&range=1d -> extended history
 router.get('/candle/:symbol', async (req, res) => {
   const { symbol } = req.params;
   const yahooSym = YAHOO_MAP[symbol] || symbol;
   const interval = req.query.interval || '1m';
+  const range = req.query.range || '1d'; // 1d,5d,1mo,3mo,6mo,1y,2y,5y,max
+  // map range to limit
+  const limitMap = {'1d':50,'5d':100,'1mo':60,'3mo':90,'6mo':120,'1y':250,'2y':500,'5y':500,'max':500}
+  const limit = limitMap[range] || 100
   try{
-    // Try Yahoo chart API for real candles
-    const { data } = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=${interval}&range=1d`, {
-      headers:{'User-Agent':'Mozilla/5.0'}, timeout:6000
+    const { data } = await axios.get(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=${interval}&range=${range}`, {
+      headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}, timeout:8000
     })
     const result = data?.chart?.result?.[0]
     if(result && result.timestamp && result.indicators?.quote?.[0]){
@@ -164,19 +167,20 @@ router.get('/candle/:symbol', async (req, res) => {
         low: q.low[i] ?? q.close[i],
         close: q.close[i],
         volume: q.volume[i] ?? 0,
-      })).filter(c=> c.close!=null).slice(-50)
+      })).filter(c=> c.close!=null).slice(-limit)
       if(candles.length>=10){
-        return res.json({ symbol, yahooSymbol: yahooSym, source:'yahoo', interval, candles })
+        return res.json({ symbol, yahooSymbol: yahooSym, source:'yahoo', interval, range, candles })
       }
     }
   }catch(e){
-    console.log('Yahoo candle failed for', yahooSym, e.message)
+    console.log('Yahoo candle failed for', yahooSym, range, e.message)
   }
-  // Fallback mock OHLCV
-  const candles = Array.from({ length: 50 }, (_, i) => {
-    const base = 100 + Math.sin(i/5)*10 + Math.random()*5;
+  // Fallback mock extended
+  const len = Math.min(limit, 500)
+  const candles = Array.from({ length: len }, (_, i) => {
+    const base = 100 + Math.sin(i/10)*15 + (i/len)*20 + Math.random()*3;
     return {
-      time: Date.now() - (50-i)*60000,
+      time: Date.now() - (len-i)* (range==='1d'?60000 : range==='5d'?300000 : 86400000),
       open: Number((base).toFixed(2)),
       high: Number((base+2).toFixed(2)),
       low: Number((base-2).toFixed(2)),
@@ -184,7 +188,7 @@ router.get('/candle/:symbol', async (req, res) => {
       volume: Math.floor(Math.random()*10000)
     };
   });
-  res.json({ symbol, yahooSymbol: yahooSym, source:'mock', interval, candles });
+  res.json({ symbol, yahooSymbol: yahooSym, source:'mock', interval, range, candles });
 });
 
 module.exports = router;
