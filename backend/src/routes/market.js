@@ -149,9 +149,9 @@ router.get('/candle/:symbol', async (req, res) => {
   const yahooSym = YAHOO_MAP[symbol] || symbol;
   const interval = req.query.interval || '1m';
   const range = req.query.range || '1d'; // 1d,5d,1mo,3mo,6mo,1y,2y,5y,max
-  // map range to limit
-  const limitMap = {'1d':50,'5d':100,'1mo':60,'3mo':90,'6mo':120,'1y':250,'2y':500,'5y':500,'max':500}
-  const limit = limitMap[range] || 100
+  // map range to limit - full market day 390 candles for 1d, extend for longer
+  const limitMap = {'1d':390,'5d':390,'1mo':120,'3mo':120,'6mo':150,'1y':250,'2y':400,'5y':500,'max':500}
+  const limit = limitMap[range] || 390
   try{
     const { data } = await axios.get(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=${interval}&range=${range}`, {
       headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}, timeout:8000

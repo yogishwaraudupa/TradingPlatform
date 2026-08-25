@@ -203,6 +203,26 @@ export default function App(){
     return points
   },[showCagr, enriched, cagr, cagrPeriods])
 
+  // Live candle update as market moves - fixes 9:00-9:43 static time to real concurrent time
+  useEffect(()=>{
+    if(!selPrice || !candles.length) return
+    const intervalMsMap = {'1d':60000,'5d':300000,'1mo':1800000,'3mo':86400000,'6mo':86400000,'1y':86400000,'2y':604800000,'5y':604800000}
+    const intervalMs = intervalMsMap[range] || 60000
+    setCandles(prev=>{
+      if(!prev.length) return prev
+      const last = prev[prev.length-1]
+      const now = Date.now()
+      // if new interval has started, push new candle with current price as open/high/low/close
+      if(now - last.time > intervalMs){
+        const newCandle = { time: now, open: selPrice.price, high: selPrice.price, low: selPrice.price, close: selPrice.price, volume: Math.floor(Math.random()*5000)+1000 }
+        return [...prev.slice(-389), newCandle]
+      }
+      // otherwise update last candle live
+      const updated = { ...last, close: selPrice.price, high: Math.max(last.high, selPrice.price), low: Math.min(last.low, selPrice.price) }
+      return [...prev.slice(0,-1), updated]
+    })
+  },[selPrice?.price])
+
   const placeOrder = async (side)=>{
     if(!qty || qty<=0) return alert('Enter valid qty')
     try{ await axios.post(`${API}/api/orders`, { symbol:selected, assetClass:cls, side, qty:Number(qty), type:orderType }); const {data}=await axios.get(`${API}/api/orders`); setOrders(data); const {data:pf}=await axios.get(`${API}/api/portfolio`); setPortfolio(pf)}catch(e){alert(e?.response?.data?.error||e.message)}
