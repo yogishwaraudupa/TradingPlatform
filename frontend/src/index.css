@@ -1,0 +1,7 @@
+body{margin:0;font-family:Inter,system-ui;background:#0b0e11;color:#eaecef}
+a{color:#f0b90b}
+.card{background:#1e2329;border-radius:12px;padding:16px;margin:8px}
+.btn{background:#f0b90b;color:#000;border:none;padding:8px 16px;border-radius:6px;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.nav{display:flex;gap:16px;padding:12px;background:#181a20}
+.price-up{color:#0ecb81}.price-down{color:#f6465d}
