@@ -124,6 +124,7 @@ export default function App(){
   const [orderType, setOrderType] = useState('MARKET')
   const [candles, setCandles] = useState([])
   const [chartType, setChartType] = useState('tradingview') // tradingview | candle | line | area
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false })
   const [showPortfolio, setShowPortfolio] = useState(false)
   const [showLiveData, setShowLiveData] = useState(false)
@@ -139,6 +140,11 @@ export default function App(){
   const [showCagr, setShowCagr] = useState(false)
 
   const handleLogout = ()=>{ localStorage.removeItem('token'); localStorage.removeItem('user'); setUser(null) }
+  useEffect(()=>{
+    const h = (e)=>{ if(e.key==='Escape' && isFullscreen) setIsFullscreen(false) }
+    window.addEventListener('keydown', h)
+    return ()=>window.removeEventListener('keydown', h)
+  },[isFullscreen])
 
   useEffect(()=>{
     if(!user) return
@@ -320,9 +326,9 @@ export default function App(){
           <div className="kpi"><div className="kpi-card"><h4>TOTAL VALUE</h4><b>${portfolio?.totalValue??0}</b></div><div className="kpi-card"><h4>OPEN P&L</h4><b className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnl??0}</b></div></div>
         </div>
 
-        <div className="panel" style={{overflow:'hidden'}}>
-          <div className="panel-h" style={{flexWrap:'wrap', gap:8}}>
-            <div><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span></div>
+        <div className="panel" style={{overflow:'hidden', ...(isFullscreen?{position:'fixed', inset:0, zIndex:50, borderRadius:0, display:'flex', flexDirection:'column'}:{})}}>
+          <div className="panel-h" style={{flexWrap:'wrap', gap:8, ...(isFullscreen?{padding:'10px 14px', background:'#1e2329', position:'sticky', top:0, zIndex:2}:{})}}>
+            <div style={{display:'flex', alignItems:'center', gap:8}}><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span> {isFullscreen && <span className="badge" style={{background:'#f0b90b', color:'#111'}}>FULLSCREEN • ESC to exit</span>}</div>
             <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap'}}>
               {[
                 ['tradingview','TRADINGVIEW ⭐'],
@@ -330,6 +336,9 @@ export default function App(){
                 ['line','LINE'],
                 ['area','AREA']
               ].map(([id,label])=> <button key={id} onClick={()=>setChartType(id)} className={`tab ${chartType===id?'active':''}`} style={{padding:'6px 10px', fontSize:11}}>{label}</button>)}
+              <button onClick={()=>setIsFullscreen(v=>!v)} className="btn btn-ghost" style={{padding:'6px 10px', fontSize:11, background: isFullscreen?'#f0b90b':'#2b3139', color: isFullscreen?'#111':'#eaecef', borderColor: isFullscreen?'#f0b90b':'#3a404a'}} title={isFullscreen?'Exit fullscreen (ESC)':'Maximize chart to full screen'}>
+                {isFullscreen?'🗗 Minimize':'⛶ Maximize'}
+              </button>
             </div>
           </div>
           {/* History Range + CAGR Tool */}
