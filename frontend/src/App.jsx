@@ -92,8 +92,12 @@ function Login({ onLogin }){
     <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'radial-gradient(800px 400px at 50% -10%, rgba(240,185,11,0.15), transparent), #0b0e11', padding:16}}>
       <div style={{width:'100%', maxWidth:400, background:'#1e2329', border:'1px solid #2b3139', borderRadius:20, padding:28, boxShadow:'0 20px 60px rgba(0,0,0,0.5)'}}>
         <div style={{textAlign:'center', marginBottom:20}}>
-          <div style={{display:'inline-flex', alignItems:'center', gap:8, background:'#f0b90b', color:'#111', padding:'6px 12px', borderRadius:10, fontWeight:800, fontSize:13}}>◼ TRADING TERMINAL</div>
-          <h2 style={{margin:'14px 0 6px 0'}}>Welcome back</h2>
+          <div style={{display:'inline-flex', alignItems:'center', gap:8, background:'linear-gradient(135deg,#f0b90b 0%,#ff8c00 100%)', color:'#111', padding:'7px 12px', borderRadius:10, fontWeight:800, fontSize:13, boxShadow:'0 4px 12px rgba(240,185,11,0.25)'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 17 L8 13 L12 15 L17 9 L21 11" stroke="#111" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="17" cy="9" r="1.6" fill="#111"/></svg>
+            TRADING TERMINAL
+          </div>
+          <div style={{fontSize:10, opacity:0.6, marginTop:6, letterSpacing:0.5}}>powered by <b style={{color:'#f0b90b'}}>Udupa</b></div>
+          <h2 style={{margin:'12px 0 6px 0'}}>Welcome back</h2>
           <p style={{opacity:0.6, fontSize:13, margin:0}}>Login • Any User ID / Password works • Case-insensitive</p>
         </div>
         <form onSubmit={handleSubmit} style={{display:'grid', gap:12}}>
@@ -233,7 +237,15 @@ export default function App(){
   return (
     <div>
       <div className="header">
-        <div className="logo"><span style={{background:'#f0b90b', color:'#111', padding:'4px 8px', borderRadius:8, fontSize:12}}>◼</span> TRADING<span>TERMINAL</span> <span className="badge">PRO • 5 ASSETS</span></div>
+        <div className="logo" style={{gap:10}}>
+          <div style={{width:36, height:36, background:'linear-gradient(135deg,#f0b90b 0%,#ff8c00 100%)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(240,185,11,0.3)', flexShrink:0}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 17 L8 13 L12 15 L17 9 L21 11" stroke="#111" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="17" cy="9" r="1.8" fill="#111"/><rect x="6.5" y="13" width="3" height="5" rx="0.5" fill="#111" opacity="0.9"/><rect x="10.5" y="15" width="3" height="4" rx="0.5" fill="#111" opacity="0.9"/></svg>
+          </div>
+          <div style={{lineHeight:1.1}}>
+            <div style={{fontWeight:800, fontSize:14, letterSpacing:0.5}}>TRADING <span style={{color:'#f0b90b'}}>TERMINAL</span> <span className="badge" style={{marginLeft:6, fontSize:9, verticalAlign:'middle'}}>PRO • 5 ASSETS</span></div>
+            <div style={{fontSize:10, opacity:0.6, letterSpacing:0.4, marginTop:2}}>powered by <b style={{color:'#f0b90b', opacity:1}}>Udupa</b> • real-time • 50+ symbols</div>
+          </div>
+        </div>
         <div className="tabs">{CLASSES.map(c=> <button key={c.id} onClick={()=>setCls(c.id)} className={`tab ${cls===c.id?'active':''}`}>{c.icon} {c.label}</button>)}</div>
         <div style={{position:'relative', marginLeft:8, display:'flex', gap:6}}>
           <div style={{position:'relative'}}>
