@@ -154,6 +154,49 @@ router.get('/quote/:symbol', async (req,res)=>{
   }
 })
 
+// GET /api/market/financials/:symbol -> fetch financial report from Yahoo (income, balance, cashflow, earnings, stats)
+router.get('/financials/:symbol', async (req,res)=>{
+  const { symbol } = req.params
+  const yahooSym = YAHOO_MAP[symbol] || symbol
+  const modules = req.query.modules || 'incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earnings,financialData,defaultKeyStatistics,assetProfile,price,quoteType'
+  try{
+    const { data } = await axios.get(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=${modules}`, {
+      headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Accept':'application/json'},
+      timeout:8000
+    })
+    const result = data?.quoteSummary?.result?.[0]
+    if(!result) return res.status(404).json({error:'No financial data', symbol, yahooSym})
+    // Simplify for frontend
+    const financials = {
+      symbol, yahooSymbol: yahooSym,
+      price: result.price,
+      quoteType: result.quoteType,
+      assetProfile: result.assetProfile,
+      financialData: result.financialData,
+      defaultKeyStatistics: result.defaultKeyStatistics,
+      incomeStatementHistory: result.incomeStatementHistory,
+      balanceSheetHistory: result.balanceSheetHistory,
+      cashflowStatementHistory: result.cashflowStatementHistory,
+      earnings: result.earnings,
+      source: 'yahoo',
+      fetchedAt: new Date().toISOString()
+    }
+    res.json(financials)
+  }catch(e){
+    console.log('financials failed for', yahooSym, e.message)
+    // Fallback mock financials
+    const mockPrice = (Math.random()*500+50).toFixed(2)
+    res.json({
+      symbol, yahooSymbol: yahooSym,
+      price: { regularMarketPrice:{raw: Number(mockPrice)}, currency:'USD' },
+      financialData: { totalRevenue:{fmt:'—'}, profitMargins:{fmt:'—'}, ebitdaMargins:{fmt:'—'} },
+      defaultKeyStatistics: { trailingPE:{fmt:'—'}, priceToBook:{fmt:'—'} },
+      incomeStatementHistory: { incomeStatementHistory: [] },
+      source: 'mock', error: e.message
+    })
+  }
+});
+
 // GET /api/market/candle/:symbol?interval=1m&range=1d -> extended history
 router.get('/candle/:symbol', async (req, res) => {
   const { symbol } = req.params;

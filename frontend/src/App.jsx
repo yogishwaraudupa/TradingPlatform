@@ -5,6 +5,8 @@ import { ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 import Portfolio from './Portfolio.jsx'
 import TradingViewChart from './TradingViewChart.jsx'
 import LiveData from './LiveData.jsx'
+import Strategies from './Strategies.jsx'
+import Financials from './Financials.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const CLASSES = [
@@ -169,6 +171,8 @@ export default function App(){
   const [drawings, setDrawings] = useState([]) // {type, from, to, label}
   const [showPortfolio, setShowPortfolio] = useState(false)
   const [showLiveData, setShowLiveData] = useState(false)
+  const [showStrategies, setShowStrategies] = useState(false)
+  const [showFinancials, setShowFinancials] = useState(false)
   const [searchQ, setSearchQ] = useState('')
   const [searchRes, setSearchRes] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
@@ -387,6 +391,8 @@ export default function App(){
             <button className="btn btn-ghost" style={{padding:'4px 8px', fontSize:10, marginLeft:4}} onClick={handleLogout} title="Logout">⎋</button>
           </div>
           <button className="btn" style={{background:'#0ecb81', color:'#111', padding:'6px 12px', fontSize:12, display:'flex', alignItems:'center', gap:6}} onClick={()=>setShowLiveData(true)}><span style={{width:8,height:8,background:'#111',borderRadius:'50%', display:'inline-block', animation:'pulse 1s infinite'}}></span> LIVE DATA</button>
+          <button className="btn" style={{background:'#a78bfa', color:'#fff', padding:'6px 12px', fontSize:12}} onClick={()=>setShowStrategies(true)}>📊 Strategies</button>
+          <button className="btn" style={{background:'#00bfff', color:'#111', padding:'6px 12px', fontSize:12}} onClick={()=>setShowFinancials(true)}>📄 Financials</button>
           <button className="btn" style={{background:'#f0b90b', color:'#111', padding:'6px 12px', fontSize:12}} onClick={()=>setShowPortfolio(true)}>📁 Portfolio</button>
           <div className="badge">Cash ${portfolio?.cash?.toLocaleString() ?? '—'}</div>
           <div className="badge" style={{background:(portfolio?.totalPnl??0)>=0?'rgba(14,203,129,0.15)':'rgba(246,70,93,0.15)'}}>P&L <span className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnl??0}</span></div>
@@ -636,6 +642,8 @@ export default function App(){
       </div>
       {showPortfolio && <Portfolio onClose={()=>setShowPortfolio(false)} />}
       {showLiveData && <LiveData onClose={()=>setShowLiveData(false)} onSelect={(sym, assetClass)=>{ setSelected(sym); if(assetClass) setCls(assetClass); }} />}
+      {showStrategies && <Strategies enriched={enriched} symbol={selected} onClose={()=>setShowStrategies(false)} />}
+      {showFinancials && <Financials symbol={selected} onClose={()=>setShowFinancials(false)} />}
     </div>
   )
 }
