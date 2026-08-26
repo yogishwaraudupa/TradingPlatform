@@ -4,7 +4,6 @@ import axios from 'axios'
 import { ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
 import Portfolio from './Portfolio.jsx'
 import TradingViewChart from './TradingViewChart.jsx'
-import TradingViewWidget from './TradingViewWidget.jsx'
 import LiveData from './LiveData.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
@@ -123,7 +122,7 @@ export default function App(){
   const [qty, setQty] = useState(1)
   const [orderType, setOrderType] = useState('MARKET')
   const [candles, setCandles] = useState([])
-  const [chartType, setChartType] = useState('tradingview') // tradingview | candle | line | area
+  const [chartType, setChartType] = useState('candle') // candle | line | area
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false })
   const [showPortfolio, setShowPortfolio] = useState(false)
@@ -249,7 +248,6 @@ export default function App(){
           <div style={{display:'flex', alignItems:'center', gap:8}}><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span> <span className="badge" style={{background:'#f0b90b', color:'#111'}}>FULLSCREEN</span></div>
           <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', marginLeft:'auto'}}>
             {[
-              ['tradingview','TRADINGVIEW ⭐'],
               ['candle','CANDLE'],
               ['line','LINE'],
               ['area','AREA']
@@ -271,7 +269,7 @@ export default function App(){
           </label>
         </div>
         <div style={{flex:1, minHeight:0, background:'#0b0e11'}}>
-          {chartType==='tradingview' ? <TradingViewWidget symbol={selected} /> : chartType==='candle' ? <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} /> : (
+          {chartType==='candle' ? <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} /> : (
             <div style={{height:'100%', padding:8}}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={showCagr ? [...enriched, ...cagrLine.map(p=>({time:p.time, cagr:p.value}))] : enriched} margin={{top:10, right:10, left:0, bottom:0}}>
@@ -376,18 +374,17 @@ export default function App(){
           <div className="kpi"><div className="kpi-card"><h4>TOTAL VALUE</h4><b>${portfolio?.totalValue??0}</b></div><div className="kpi-card"><h4>OPEN P&L</h4><b className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnl??0}</b></div></div>
         </div>
 
-        <div className="panel" style={{overflow:'hidden', ...(isFullscreen?{position:'fixed', inset:0, zIndex:50, borderRadius:0, display:'flex', flexDirection:'column'}:{})}}>
-          <div className="panel-h" style={{flexWrap:'wrap', gap:8, ...(isFullscreen?{padding:'10px 14px', background:'#1e2329', position:'sticky', top:0, zIndex:2}:{})}}>
-            <div style={{display:'flex', alignItems:'center', gap:8}}><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span> {isFullscreen && <span className="badge" style={{background:'#f0b90b', color:'#111'}}>FULLSCREEN • ESC to exit</span>}</div>
+        <div className="panel" style={{overflow:'hidden'}}>
+          <div className="panel-h" style={{flexWrap:'wrap', gap:8}}>
+            <div style={{display:'flex', alignItems:'center', gap:8}}><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span></div>
             <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap'}}>
               {[
-                ['tradingview','TRADINGVIEW ⭐'],
                 ['candle','CANDLE'],
                 ['line','LINE'],
                 ['area','AREA']
               ].map(([id,label])=> <button key={id} onClick={()=>setChartType(id)} className={`tab ${chartType===id?'active':''}`} style={{padding:'6px 10px', fontSize:11}}>{label}</button>)}
-              <button onClick={()=>setIsFullscreen(v=>!v)} className="btn btn-ghost" style={{padding:'6px 10px', fontSize:11, background: isFullscreen?'#f0b90b':'#2b3139', color: isFullscreen?'#111':'#eaecef', borderColor: isFullscreen?'#f0b90b':'#3a404a'}} title={isFullscreen?'Exit fullscreen (ESC)':'Maximize chart to full screen'}>
-                {isFullscreen?'🗗 Minimize':'⛶ Maximize'}
+              <button onClick={()=>setIsFullscreen(v=>!v)} className="btn btn-ghost" style={{padding:'6px 10px', fontSize:11}} title="Maximize chart to full screen">
+                ⛶ Maximize
               </button>
             </div>
           </div>
@@ -419,14 +416,12 @@ export default function App(){
             ))}
           </div>
 
-          {/* Main Chart - TradingView full widget + lightweight fallback */}
-          <div style={{height:380, background:'#0b0e11', borderBottom:'1px solid #2b3139'}}>
-            {chartType==='tradingview' ? (
-              <TradingViewWidget symbol={selected} />
-            ) : chartType==='candle' ? (
+          {/* Main Chart - custom TradingView-like (lightweight-charts) */}
+          <div style={{height:360, background:'#0b0e11', borderBottom:'1px solid #2b3139'}}>
+            {chartType==='candle' ? (
               <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} />
             ) : (
-              <div style={{height:380, padding:8}}>
+              <div style={{height:360, padding:8}}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={showCagr ? [...enriched, ...cagrLine.map(p=>({time:p.time, cagr:p.value}))] : enriched} margin={{top:10, right:10, left:0, bottom:0}}>
                     <CartesianGrid stroke="rgba(43,49,57,0.5)" strokeDasharray="3 3" />
