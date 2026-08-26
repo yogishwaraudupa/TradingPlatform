@@ -235,8 +235,10 @@ export default function App(){
   if(!user) return <Login onLogin={setUser} />
 
   return (
-    <div>
-      <div className="header">
+    <div style={{position:'relative', minHeight:'100vh'}}>
+      <div style={{position:'fixed', inset:0, zIndex:-2, background:'radial-gradient(1000px 600px at 20% 0%, rgba(240,185,11,0.07), transparent 60%), radial-gradient(800px 500px at 90% 20%, rgba(0,191,255,0.06), transparent 60%), #0b0e11'}} />
+      <div style={{position:'fixed', inset:0, zIndex:-1, opacity:0.25, backgroundImage:'linear-gradient(rgba(43,49,57,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(43,49,57,0.3) 1px, transparent 1px)', backgroundSize:'40px 40px', transform:'perspective(800px) rotateX(60deg) translateY(-100px) scale(1.5)', transformOrigin:'top'}} />
+      <div className="header" style={{boxShadow:'0 10px 30px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.06) inset'}}>
         <div className="logo" style={{gap:10}}>
           <div style={{width:36, height:36, background:'linear-gradient(135deg,#f0b90b 0%,#ff8c00 100%)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(240,185,11,0.3)', flexShrink:0}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 17 L8 13 L12 15 L17 9 L21 11" stroke="#111" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="17" cy="9" r="1.8" fill="#111"/><rect x="6.5" y="13" width="3" height="5" rx="0.5" fill="#111" opacity="0.9"/><rect x="10.5" y="15" width="3" height="4" rx="0.5" fill="#111" opacity="0.9"/></svg>
