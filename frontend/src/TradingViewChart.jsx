@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { createChart, ColorType, CrosshairMode } from 'lightweight-charts'
 
-export default function TradingViewChart({ data, symbol, showVolume=true, sma20Data, sma50Data, ema20Data, cagrLine }){
+export default function TradingViewChart({ data, symbol, showVolume=true, sma20Data, sma50Data, ema20Data, cagrLine, extraLines, drawings }){
   const containerRef = useRef(null)
 
   useEffect(()=>{
@@ -50,11 +50,33 @@ export default function TradingViewChart({ data, symbol, showVolume=true, sma20D
     if(sma20Data) addLine('sma20', '#00bfff')
     if(sma50Data) addLine('sma50', '#ff8c00')
     if(ema20Data) addLine('ema20', '#a78bfa', true)
-
+    if(extraLines){
+      if(extraLines.vwap) addLine('vwap', '#ffd700')
+      if(extraLines.supertrend) addLine('supertrend', '#ff00ff')
+    }
     // CAGR projection line (dashed yellow)
     if(cagrLine && cagrLine.length){
       const cagrSeries = chart.addLineSeries({ color: '#f0b90b', lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: true, title: `CAGR ${cagrLine[0]?.label||''}` })
       cagrSeries.setData(cagrLine.map(d=> ({ time: Math.floor(d.time/1000), value: d.value })))
+    }
+    // Drawings like TradingView (trendline, hline, fib)
+    if(drawings && drawings.length){
+      drawings.forEach(d=>{
+        if(d.type==='hline'){
+          candleSeries.createPriceLine({ price: d.value, color: '#f0b90b', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `H ${d.value}` })
+        } else if(d.type==='trendline'){
+          const s = chart.addLineSeries({ color:'#00ff88', lineWidth:2, priceLineVisible:false })
+          s.setData([ {time: Math.floor(d.from.time/1000), value: d.from.value}, {time: Math.floor(d.to.time/1000), value: d.to.value} ])
+        } else if(d.type==='fib'){
+          const levels=[0,0.236,0.382,0.5,0.618,0.786,1]
+          const range=d.hi-d.lo
+          levels.forEach((lv,i)=>{
+            const price=d.hi - range*lv
+            const col=['#ff0000','#ff8c00','#ffd700','#0ecb81','#00bfff','#a78bfa','#f0b90b'][i%7]
+            candleSeries.createPriceLine({ price, color: col, lineWidth:1, lineStyle: i===0||i===6?0:2, axisLabelVisible:true, title:`Fib ${(lv*100).toFixed(1)}%` })
+          })
+        }
+      })
     }
 
     chart.priceScale('right').applyOptions({ autoScale: true })
@@ -62,7 +84,7 @@ export default function TradingViewChart({ data, symbol, showVolume=true, sma20D
     const handleResize = ()=> chart.applyOptions({ width: containerRef.current.clientWidth })
     window.addEventListener('resize', handleResize)
     return ()=>{ window.removeEventListener('resize', handleResize); chart.remove() }
-  }, [data, showVolume, sma20Data, sma50Data, ema20Data, cagrLine])
+  }, [data, showVolume, sma20Data, sma50Data, ema20Data, cagrLine, extraLines, drawings])
 
   return <div ref={containerRef} style={{width:'100%', height:360}} />
 }

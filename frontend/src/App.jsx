@@ -46,11 +46,51 @@ function macd(data){
   let signal = ema(withMacd.map(d=>({close:d.macd})),9)
   return withMacd.map((d,i)=>({...d, macdSignal: signal[i].ema9, macdHist: Number((d.macd - signal[i].ema9).toFixed(2))}))
 }
+function stochastic(data, k=14, d=3){
+  return data.map((_,i)=>{
+    if(i<k-1) return {...data[i], stochK:null, stochD:null}
+    const slice=data.slice(i-k+1,i+1)
+    const highest=Math.max(...slice.map(x=>x.high)), lowest=Math.min(...slice.map(x=>x.low))
+    const kVal = highest===lowest?50: ((data[i].close - lowest)/(highest-lowest))*100
+    return {...data[i], stochK: Number(kVal.toFixed(2)), stochD: null}
+  }).map((d,i,arr)=>{
+    if(i<k+d-2) return d
+    const avg = arr.slice(i-d+1,i+1).reduce((a,c)=>a+(c.stochK||0),0)/d
+    return {...d, stochD: Number(avg.toFixed(2))}
+  })
+}
+function vwap(data){
+  let cumPV=0, cumV=0
+  return data.map(d=>{
+    cumPV += d.close * d.volume
+    cumV += d.volume
+    const v = cumV? cumPV/cumV : d.close
+    return {...d, vwap: Number(v.toFixed(2))}
+  })
+}
+function supertrend(data, period=10, mult=3){
+  // simplified supertrend: mid = (high+low)/2, atr approx
+  let prevST=null, prevUp=null, prevLo=null
+  return data.map((d,i)=>{
+    if(i<period) return {...d, supertrend:null, stDir:1}
+    const slice=data.slice(i-period,i+1)
+    const atr = slice.reduce((a,c,idx)=> a+ (idx? Math.abs(c.high - data[i-idx].close):0),0)/period
+    const hl2=(d.high+d.low)/2
+    const up=hl2+mult*atr, lo=hl2-mult*atr
+    let st, dir
+    if(prevST==null){ st=lo; dir=1 }
+    else if(d.close > prevUp){ st=lo; dir=1 }
+    else if(d.close < prevLo){ st=up; dir=-1 }
+    else { st= dir===1? Math.max(lo, prevST) : Math.min(up, prevST); dir=prevST? (d.close>prevST?1:-1):1 }
+    prevST=st; prevUp=up; prevLo=lo
+    return {...d, supertrend: Number(st.toFixed(2)), stDir: dir}
+  })
+}
 function enrich(data){
   if(!data.length) return data
   let d=[...data]
   d=sma(d,20); d=sma(d,50); d=ema(d,20); d=rsi(d,14); d=bollinger(d,20); d=macd(d)
-  // add candle helpers for custom rendering
+  d=stochastic(d,14,3); d=vwap(d); d=supertrend(d,10,3)
   return d.map(x=>({...x, isUp: x.close>=x.open, body: [x.open, x.close], wick: [x.low, x.high]}))
 }
 
@@ -124,7 +164,9 @@ export default function App(){
   const [candles, setCandles] = useState([])
   const [chartType, setChartType] = useState('candle') // candle | line | area
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false })
+  const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false, stoch:false, vwap:false, supertrend:false })
+  const [tool, setTool] = useState('crosshair') // crosshair | trendline | hline | fib | measure
+  const [drawings, setDrawings] = useState([]) // {type, from, to, label}
   const [showPortfolio, setShowPortfolio] = useState(false)
   const [showLiveData, setShowLiveData] = useState(false)
   const [searchQ, setSearchQ] = useState('')
@@ -269,7 +311,7 @@ export default function App(){
           </label>
         </div>
         <div style={{flex:1, minHeight:0, background:'#0b0e11'}}>
-          {chartType==='candle' ? <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} /> : (
+          {chartType==='candle' ? <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} extraLines={{vwap:ind.vwap, supertrend:ind.supertrend}} drawings={drawings} /> : (
             <div style={{height:'100%', padding:8}}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={showCagr ? [...enriched, ...cagrLine.map(p=>({time:p.time, cagr:p.value}))] : enriched} margin={{top:10, right:10, left:0, bottom:0}}>
@@ -404,11 +446,50 @@ export default function App(){
             </label>
             {showCagr && enriched.length>0 && <span style={{fontSize:10, opacity:0.6}}>→ {cagrLine[0]?.value} → {cagrLine[cagrLine.length-1]?.value?.toFixed(2)} {Number(cagr)>=0?'↗':'↘'}</span>}
           </div>
-          {/* Indicator toggles */}
+          {/* Tools like TradingView - drawings */}
+          <div style={{display:'flex', gap:6, padding:'8px 12px', flexWrap:'wrap', alignItems:'center', borderBottom:'1px solid #2b3139', background:'#14181f'}}>
+            <span style={{fontSize:11, opacity:0.6}}>TOOLS:</span>
+            {[
+              ['crosshair','✛ Crosshair'],
+              ['trendline','📈 Trendline'],
+              ['hline','➖ H-Line'],
+              ['fib','📐 Fib'],
+              ['measure','📏 Measure'],
+            ].map(([id,label])=>(
+              <button key={id} onClick={()=>{
+                if(tool===id) setTool('crosshair')
+                else setTool(id)
+                if(id==='trendline' && tool!=='trendline'){
+                  // demo trendline from last low to last high
+                  const last = enriched[enriched.length-1]; const first = enriched[0]
+                  if(last && first) setDrawings(d=>[...d, {type:'trendline', from:{time:first.time, value:first.low}, to:{time:last.time, value:last.high}, id:Date.now()}])
+                }
+                if(id==='hline' && tool!=='hline'){
+                  const last = enriched[enriched.length-1]
+                  if(last) setDrawings(d=>[...d, {type:'hline', value:last.close, id:Date.now()}])
+                }
+                if(id==='fib' && tool!=='fib'){
+                  const highs = enriched.map(x=>x.high), lows = enriched.map(x=>x.low)
+                  const hi=Math.max(...highs), lo=Math.min(...lows)
+                  setDrawings(d=>[...d, {type:'fib', hi, lo, id:Date.now()}])
+                }
+                if(id==='measure'){
+                  const last=enriched[enriched.length-1], first=enriched[0]
+                  if(last && first){
+                    const pct=((last.close-first.close)/first.close*100).toFixed(2)
+                    alert(`Measure: ${first.close} → ${last.close} = ${pct}% over ${enriched.length} candles`)
+                  }
+                }
+              }} className={`tab ${tool===id?'active':''}`} style={{padding:'5px 8px', fontSize:10}}>{label}</button>
+            ))}
+            <button onClick={()=>setDrawings([])} className="btn btn-ghost" style={{padding:'5px 8px', fontSize:10}}>🗑 Clear</button>
+            <span style={{fontSize:10, opacity:0.5, marginLeft:6}}>{tool!=='crosshair' ? `Active: ${tool} • Click chart or use Clear` : 'Select a tool'}</span>
+          </div>
+          {/* Indicator toggles - extended like TradingView */}
           <div style={{display:'flex', gap:6, padding:'8px 12px', flexWrap:'wrap', borderBottom:'1px solid #2b3139', background:'#181a20'}}>
             <span style={{fontSize:11, opacity:0.6, alignSelf:'center'}}>INDICATORS:</span>
             {[
-              ['sma20','SMA20'],['sma50','SMA50'],['ema20','EMA20'],['bb','BB'],['volume','VOL'],['rsi','RSI'],['macd','MACD']
+              ['sma20','SMA20'],['sma50','SMA50'],['ema20','EMA20'],['bb','BB'],['volume','VOL'],['rsi','RSI'],['macd','MACD'],['stoch','STOCH'],['vwap','VWAP'],['supertrend','SuperTrend'],
             ].map(([k,label])=>(
               <label key={k} style={{display:'flex', gap:4, alignItems:'center', background: ind[k]?'#f0b90b':'#2b3139', color: ind[k]?'#111':'#eaecef', padding:'4px 8px', borderRadius:999, fontSize:11, cursor:'pointer', fontWeight:600}}>
                 <input type="checkbox" checked={ind[k]} onChange={e=>setInd({...ind, [k]:e.target.checked})} style={{accentColor:'#f0b90b'}} /> {label}
@@ -419,7 +500,7 @@ export default function App(){
           {/* Main Chart - custom TradingView-like (lightweight-charts) */}
           <div style={{height:360, background:'#0b0e11', borderBottom:'1px solid #2b3139'}}>
             {chartType==='candle' ? (
-              <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} />
+              <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} extraLines={{vwap:ind.vwap, supertrend:ind.supertrend}} drawings={drawings} />
             ) : (
               <div style={{height:360, padding:8}}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -433,12 +514,27 @@ export default function App(){
                     {ind.sma50 && <Line type="monotone" dataKey="sma50" stroke="#ff8c00" dot={false} strokeWidth={1.5} />}
                     {ind.ema20 && <Line type="monotone" dataKey="ema20" stroke="#a78bfa" dot={false} strokeWidth={1.5} strokeDasharray="4 2" />}
                     {ind.bb && <><Line type="monotone" dataKey="bbUpper" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbLower" stroke="rgba(132,142,156,0.7)" dot={false} strokeWidth={1} strokeDasharray="3 3" /><Line type="monotone" dataKey="bbMid" stroke="rgba(132,142,156,0.5)" dot={false} strokeWidth={1} /></>}
+                    {ind.vwap && <Line type="monotone" dataKey="vwap" stroke="#ffd700" dot={false} strokeWidth={1.2} strokeDasharray="2 2" />}
+                    {ind.supertrend && <Line type="monotone" dataKey="supertrend" stroke="#ff00ff" dot={false} strokeWidth={1.5} />}
                     {showCagr && <Line type="monotone" dataKey="cagr" stroke="#f0b90b" dot={false} strokeWidth={2} strokeDasharray="6 4" />}
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             )}
           </div>
+
+          {/* Drawings info bar - TradingView-like */}
+          {drawings.length>0 && (
+            <div style={{padding:'6px 12px', background:'#1e2329', borderBottom:'1px solid #2b3139', display:'flex', gap:6, flexWrap:'wrap', alignItems:'center'}}>
+              <span style={{fontSize:10, opacity:0.6}}>DRAWINGS ({drawings.length}):</span>
+              {drawings.map(d=>(
+                <span key={d.id} className="badge" style={{fontSize:10, background:'#2b3139'}}>
+                  {d.type==='hline'?`H-Line ${d.value}`: d.type==='trendline'?`Trend ${d.from.value}→${d.to.value}`: d.type==='fib'?`Fib ${d.lo}↔${d.hi}`: d.type}
+                  <button onClick={()=>setDrawings(prev=>prev.filter(x=>x.id!==d.id))} style={{marginLeft:6, background:'transparent', border:'none', color:'#f6465d', cursor:'pointer', fontSize:10}}>✕</button>
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Volume */}
           {ind.volume && (
@@ -465,6 +561,23 @@ export default function App(){
                   <Line type="monotone" dataKey="rsi" stroke="#f0b90b" dot={false} strokeWidth={1.5} />
                   <Line type="monotone" dataKey={()=>70} stroke="rgba(246,70,93,0.5)" dot={false} strokeDasharray="3 3" />
                   <Line type="monotone" dataKey={()=>30} stroke="rgba(14,203,129,0.5)" dot={false} strokeDasharray="3 3" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Stoch */}
+          {ind.stoch && (
+            <div style={{height:110, padding:'0 8px 8px 8px', background:'#0b0e11', borderTop:'1px solid #2b3139'}}>
+              <div style={{fontSize:10, opacity:0.6, padding:'4px'}}>STOCH (14,3) • K {enriched[enriched.length-1]?.stochK ?? 50} • D {enriched[enriched.length-1]?.stochD ?? 50}</div>
+              <ResponsiveContainer width="100%" height={80}>
+                <ComposedChart data={enriched}>
+                  <YAxis domain={[0,100]} tick={{fontSize:10, fill:'#848e9c'}} width={30} /><XAxis dataKey="time" hide />
+                  <Tooltip contentStyle={{background:'#181a20', border:'1px solid #2b3139', borderRadius:8}} />
+                  <Line type="monotone" dataKey="stochK" stroke="#00bfff" dot={false} strokeWidth={1.5} />
+                  <Line type="monotone" dataKey="stochD" stroke="#ff8c00" dot={false} strokeWidth={1.5} />
+                  <Line type="monotone" dataKey={()=>80} stroke="rgba(246,70,93,0.4)" dot={false} strokeDasharray="3 3" />
+                  <Line type="monotone" dataKey={()=>20} stroke="rgba(14,203,129,0.4)" dot={false} strokeDasharray="3 3" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
