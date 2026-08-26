@@ -241,6 +241,56 @@ export default function App(){
 
   if(!user) return <Login onLogin={setUser} />
 
+  // Fullscreen overlay - covers all screen, no overlap with header/ticker/other panels
+  if(isFullscreen){
+    return (
+      <div style={{position:'fixed', inset:0, zIndex:50, background:'#0b0e11', display:'flex', flexDirection:'column'}}>
+        <div className="header" style={{boxShadow:'0 10px 30px rgba(0,0,0,0.5)', flexShrink:0}}>
+          <div style={{display:'flex', alignItems:'center', gap:8}}><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span> <span className="badge" style={{background:'#f0b90b', color:'#111'}}>FULLSCREEN</span></div>
+          <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', marginLeft:'auto'}}>
+            {[
+              ['tradingview','TRADINGVIEW ⭐'],
+              ['candle','CANDLE'],
+              ['line','LINE'],
+              ['area','AREA']
+            ].map(([id,label])=> <button key={id} onClick={()=>setChartType(id)} className={`tab ${chartType===id?'active':''}`} style={{padding:'6px 10px', fontSize:11}}>{label}</button>)}
+            <button onClick={()=>setIsFullscreen(false)} className="btn" style={{background:'#f6465d', color:'#fff', padding:'6px 12px', fontSize:11}}>🗗 Exit Fullscreen (ESC)</button>
+          </div>
+        </div>
+        <div style={{display:'flex', gap:6, padding:'8px 12px', flexWrap:'wrap', alignItems:'center', borderBottom:'1px solid #2b3139', background:'#0b0e11', flexShrink:0}}>
+          <span style={{fontSize:11, opacity:0.6}}>HISTORY:</span>
+          {['1d','5d','1mo','3mo','6mo','1y','2y','5y'].map(r=>(
+            <button key={r} onClick={()=>setRange(r)} className={`tab ${range===r?'active':''}`} style={{padding:'5px 8px', fontSize:10}}>{r.toUpperCase()}</button>
+          ))}
+          <span style={{marginLeft:8, fontSize:11, opacity:0.6}}>CAGR:</span>
+          <input type="number" value={cagr} onChange={e=>setCagr(e.target.value)} style={{width:60, padding:'5px 6px', fontSize:11, background:'#1e2329', border:'1px solid #2b3139', borderRadius:6, color:'#eaecef'}} />
+          <span style={{fontSize:11}}>%</span>
+          <input type="number" value={cagrPeriods} onChange={e=>setCagrPeriods(e.target.value)} style={{width:55, padding:'5px 6px', fontSize:11, background:'#1e2329', border:'1px solid #2b3139', borderRadius:6, color:'#eaecef'}} />
+          <label style={{display:'flex', gap:4, alignItems:'center', background: showCagr?'#f0b90b':'#2b3139', color: showCagr?'#111':'#eaecef', padding:'4px 8px', borderRadius:999, fontSize:11, cursor:'pointer', fontWeight:600}}>
+            <input type="checkbox" checked={showCagr} onChange={e=>setShowCagr(e.target.checked)} style={{accentColor:'#f0b90b'}} /> {showCagr?'✓ PROJ':'SHOW'}
+          </label>
+        </div>
+        <div style={{flex:1, minHeight:0, background:'#0b0e11'}}>
+          {chartType==='tradingview' ? <TradingViewWidget symbol={selected} /> : chartType==='candle' ? <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} /> : (
+            <div style={{height:'100%', padding:8}}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={showCagr ? [...enriched, ...cagrLine.map(p=>({time:p.time, cagr:p.value}))] : enriched} margin={{top:10, right:10, left:0, bottom:0}}>
+                  <CartesianGrid stroke="rgba(43,49,57,0.5)" strokeDasharray="3 3" />
+                  <XAxis dataKey="time" hide /><YAxis domain={['dataMin-2','dataMax+2']} tick={{fontSize:10, fill:'#848e9c'}} width={50} />
+                  <Tooltip contentStyle={{background:'#181a20', border:'1px solid #2b3139', borderRadius:12, fontSize:12}} />
+                  {chartType==='line' && <Line type="monotone" dataKey="close" stroke="#f0b90b" dot={false} strokeWidth={2} />}
+                  {chartType==='area' && <Area type="monotone" dataKey="close" stroke="#f0b90b" fill="rgba(240,185,11,0.18)" strokeWidth={2} />}
+                  {showCagr && <Line type="monotone" dataKey="cagr" stroke="#f0b90b" dot={false} strokeWidth={2} strokeDasharray="6 4" />}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+        <div style={{padding:'6px 12px', fontSize:11, opacity:0.6, borderTop:'1px solid #2b3139', textAlign:'center'}}>Press ESC or Exit Fullscreen to return • {selected} • {enriched.length} candles • Real-time</div>
+      </div>
+    )
+  }
+
   return (
     <div style={{position:'relative', minHeight:'100vh'}}>
       <div style={{position:'fixed', inset:0, zIndex:-2, background:'radial-gradient(1000px 600px at 20% 0%, rgba(240,185,11,0.07), transparent 60%), radial-gradient(800px 500px at 90% 20%, rgba(0,191,255,0.06), transparent 60%), #0b0e11'}} />
