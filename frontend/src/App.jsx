@@ -4,6 +4,7 @@ import axios from 'axios'
 import { ComposedChart, Area, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
 import Portfolio from './Portfolio.jsx'
 import TradingViewChart from './TradingViewChart.jsx'
+import TradingViewWidget from './TradingViewWidget.jsx'
 import LiveData from './LiveData.jsx'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
@@ -122,7 +123,7 @@ export default function App(){
   const [qty, setQty] = useState(1)
   const [orderType, setOrderType] = useState('MARKET')
   const [candles, setCandles] = useState([])
-  const [chartType, setChartType] = useState('candle') // candle | line | area
+  const [chartType, setChartType] = useState('tradingview') // tradingview | candle | line | area
   const [ind, setInd] = useState({ sma20:true, sma50:false, ema20:false, bb:false, volume:true, rsi:true, macd:false })
   const [showPortfolio, setShowPortfolio] = useState(false)
   const [showLiveData, setShowLiveData] = useState(false)
@@ -323,7 +324,12 @@ export default function App(){
           <div className="panel-h" style={{flexWrap:'wrap', gap:8}}>
             <div><span className="sym" style={{fontSize:16}}>{selected}</span> <span className={selPrice?.change>=0?'price-up':'price-down'}> {selPrice?.price} ({selPrice?.change>0?'+':''}{selPrice?.change}%)</span></div>
             <div style={{display:'flex', gap:6, alignItems:'center', flexWrap:'wrap'}}>
-              {['candle','line','area'].map(t=> <button key={t} onClick={()=>setChartType(t)} className={`tab ${chartType===t?'active':''}`} style={{padding:'6px 10px', fontSize:11}}>{t.toUpperCase()}</button>)}
+              {[
+                ['tradingview','TRADINGVIEW ⭐'],
+                ['candle','CANDLE'],
+                ['line','LINE'],
+                ['area','AREA']
+              ].map(([id,label])=> <button key={id} onClick={()=>setChartType(id)} className={`tab ${chartType===id?'active':''}`} style={{padding:'6px 10px', fontSize:11}}>{label}</button>)}
             </div>
           </div>
           {/* History Range + CAGR Tool */}
@@ -354,12 +360,14 @@ export default function App(){
             ))}
           </div>
 
-          {/* Main Chart - TradingView style */}
-          <div style={{height:360, background:'#0b0e11', borderBottom:'1px solid #2b3139'}}>
-            {chartType==='candle' ? (
+          {/* Main Chart - TradingView full widget + lightweight fallback */}
+          <div style={{height:380, background:'#0b0e11', borderBottom:'1px solid #2b3139'}}>
+            {chartType==='tradingview' ? (
+              <TradingViewWidget symbol={selected} />
+            ) : chartType==='candle' ? (
               <TradingViewChart data={enriched} symbol={selected} showVolume={false} sma20Data={ind.sma20} sma50Data={ind.sma50} ema20Data={ind.ema20} cagrLine={showCagr?cagrLine:null} />
             ) : (
-              <div style={{height:360, padding:8}}>
+              <div style={{height:380, padding:8}}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={showCagr ? [...enriched, ...cagrLine.map(p=>({time:p.time, cagr:p.value}))] : enriched} margin={{top:10, right:10, left:0, bottom:0}}>
                     <CartesianGrid stroke="rgba(43,49,57,0.5)" strokeDasharray="3 3" />
