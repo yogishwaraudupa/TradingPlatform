@@ -377,12 +377,19 @@ export default function App(){
           </select>
         </div>
         <div style={{marginLeft:'auto', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap'}}>
-          <div className="badge">Hi, {user.name||user.email}</div>
+          {/* Account login at corner */}
+          <div style={{display:'flex', alignItems:'center', gap:8, background:'#1e2329', border:'1px solid #2b3139', borderRadius:12, padding:'4px 8px 4px 4px', boxShadow:'0 4px 12px rgba(0,0,0,0.2)'}}>
+            <div style={{width:30,height:30, borderRadius:'50%', background:'linear-gradient(135deg,#f0b90b 0%,#ff8c00 100%)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:'#111', fontSize:13, flexShrink:0}}>{(user.name||user.email||'U')[0].toUpperCase()}</div>
+            <div style={{lineHeight:1.1}}>
+              <div style={{fontSize:11, fontWeight:700}}>{user.name||user.email}</div>
+              <div style={{fontSize:10, opacity:0.6, display:'flex', alignItems:'center', gap:4}}><span style={{width:6,height:6, background:'#0ecb81', borderRadius:'50%', display:'inline-block'}}></span> {user.email} • Online</div>
+            </div>
+            <button className="btn btn-ghost" style={{padding:'4px 8px', fontSize:10, marginLeft:4}} onClick={handleLogout} title="Logout">⎋</button>
+          </div>
           <button className="btn" style={{background:'#0ecb81', color:'#111', padding:'6px 12px', fontSize:12, display:'flex', alignItems:'center', gap:6}} onClick={()=>setShowLiveData(true)}><span style={{width:8,height:8,background:'#111',borderRadius:'50%', display:'inline-block', animation:'pulse 1s infinite'}}></span> LIVE DATA</button>
           <button className="btn" style={{background:'#f0b90b', color:'#111', padding:'6px 12px', fontSize:12}} onClick={()=>setShowPortfolio(true)}>📁 Portfolio</button>
           <div className="badge">Cash ${portfolio?.cash?.toLocaleString() ?? '—'}</div>
           <div className="badge" style={{background:(portfolio?.totalPnl??0)>=0?'rgba(14,203,129,0.15)':'rgba(246,70,93,0.15)'}}>P&L <span className={(portfolio?.totalPnl??0)>=0?'price-up':'price-down'}>{portfolio?.totalPnl??0}</span></div>
-          <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
         </div>
       </div>
       <div className="ticker">
